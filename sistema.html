@@ -138,17 +138,72 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .ac-expand{position:absolute;right:20px;top:24px;color:var(--muted);transition:transform .3s;font-size:11px;}
 .admin-card.expanded .ac-expand{transform:rotate(180deg);color:var(--gold);}
 
-@media(max-width:700px){
-  .sidebar{width:60px;}
-  .sb-logo,.sb-user,.nav-item span,.logout-btn span{display:none;}
-  .nav-item{justify-content:center;padding:14px;}
-  .main{padding:24px 16px;}
-  .reg-form{grid-template-columns:1fr 1fr;gap:12px;}
-  .btn-add{grid-column:span 2;}
+@media(max-width:768px){
+  /* Login */
+  #tela-login{padding:20px;align-items:flex-start;padding-top:40px;}
+  .login-card{padding:36px 28px 36px;}
+  .l-title{font-size:24px;margin-bottom:28px;}
+
+  /* Dashboard layout — sem sidebar, bottom nav */
+  .layout{flex-direction:column;}
+  .sidebar{display:none;}
+  .main{padding:20px 16px 80px;}
+  .page-title{font-size:22px;}
+
+  /* Bottom nav */
+  .bottom-nav{display:flex!important;}
+
+  /* Sumário — 2 colunas */
   .summary{grid-template-columns:1fr 1fr;}
-  .tbl-head,.tbl-row{grid-template-columns:30px 1fr 90px 50px;}
+
+  /* Filtros — scroll horizontal */
+  .filter-bar{flex-wrap:nowrap;overflow-x:auto;padding:12px 16px;gap:8px;-webkit-overflow-scrolling:touch;}
+  .filter-bar::-webkit-scrollbar{display:none;}
+  .filter-label{display:none;}
+  .fsep{display:none;}
+  .fdate{flex-shrink:0;}
+  .btn-clear{flex-shrink:0;}
+
+  /* Form — coluna única */
+  .reg-form{grid-template-columns:1fr 1fr;gap:12px;padding:16px;}
+  .btn-add{grid-column:span 2;}
+
+  /* Tabela */
+  .tbl-wrap{padding:0 16px 16px;}
+  .tbl-head{grid-template-columns:30px 1fr 90px 40px;}
+  .tbl-row{grid-template-columns:30px 1fr 90px 40px;}
   .col-var{display:none;}
+  .row-peso{font-size:13px;}
+
+  /* Admin */
+  .admin-grid{grid-template-columns:1fr;}
+  .ac-stats{gap:16px;}
+
+  /* Sumário valores */
+  .sum-val{font-size:18px;}
+  .sum-item{padding:14px 16px;}
 }
+
+/* Bottom navigation para mobile */
+.bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--panel);
+  border-top:1px solid var(--border);
+  z-index:100;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:10px 0;gap:4px;cursor:pointer;
+  color:var(--muted);font-size:10px;letter-spacing:.5px;
+  text-transform:uppercase;font-weight:500;
+  transition:color .2s;border:none;background:none;
+  font-family:'Inter',sans-serif;
+}
+.bn-item.active{color:var(--gold-lt);}
+.bn-item svg{opacity:.6;}
+.bn-item.active svg{opacity:1;}
 </style>
 </head>
 <body>
@@ -303,8 +358,23 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         </div>
       </div>
 
-    </main>
-  </div>
+  <!-- Bottom nav mobile -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bn-item active" id="bn-pesagens" onclick="setPage('pesagens')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18"/></svg>
+      Pesagens
+    </button>
+    <button class="bn-item" id="bn-admin" onclick="setPage('admin')" style="display:none">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Admin
+    </button>
+    <button class="bn-item" onclick="logout()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      Sair
+    </button>
+  </nav>
+
+</div>
 </div>
 
 <!-- Firebase SDK -->
@@ -476,8 +546,12 @@ function entrarDashboard() {
   document.getElementById('sb-username').textContent = usuarioLogado;
   if(usuarioLogado === 'admin') {
     document.getElementById('nav-admin').style.display = 'flex';
+    var bnA = document.getElementById('bn-admin');
+    if(bnA) bnA.style.display = 'flex';
   } else {
     document.getElementById('nav-admin').style.display = 'none';
+    var bnA = document.getElementById('bn-admin');
+    if(bnA) bnA.style.display = 'none';
   }
   setPage('pesagens');
   document.getElementById('inp-data').value = today;
@@ -530,6 +604,10 @@ window.setPage = function(page) {
   document.getElementById('page-admin').classList.toggle('active', page === 'admin');
   document.getElementById('nav-pesagens').classList.toggle('active', page === 'pesagens');
   document.getElementById('nav-admin').classList.toggle('active', page === 'admin');
+  var bnP = document.getElementById('bn-pesagens');
+  var bnA = document.getElementById('bn-admin');
+  if(bnP) bnP.classList.toggle('active', page === 'pesagens');
+  if(bnA) bnA.classList.toggle('active', page === 'admin');
   if(page === 'admin') renderAdmin();
 }
 
