@@ -174,11 +174,16 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .notes-status.saved{color:#7eea9b;}
 .notes-area{width:100%;min-height:420px;padding:24px 28px;background:transparent;border:none;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.7;resize:vertical;outline:none;}
 .notes-area::placeholder{color:var(--muted);}
-.hist-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:13px;}
-.hist-row:last-child{border-bottom:none;}
+.hist-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:13px;cursor:pointer;}
+.hist-row-wrap:last-child .hist-row{border-bottom:none;}
+.hist-row-wrap.open .hist-row{border-bottom:1px solid rgba(255,255,255,.03);}
 .hist-row-right{display:flex;align-items:center;gap:14px;}
 .btn-reopen{background:none;border:1px solid rgba(212,175,55,.4);color:var(--gold-lt);font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer;transition:background .2s,border-color .2s;font-family:'Inter',sans-serif;}
 .btn-reopen:hover{background:rgba(201,168,76,.1);border-color:var(--gold);}
+.hist-expand{font-size:10px;color:var(--muted);transition:transform .3s;}
+.hist-expand.open{transform:rotate(180deg);color:var(--gold);}
+.hist-detail{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1);}
+.hist-detail.open{max-height:400px;overflow-y:auto;padding-bottom:8px;}
 .hist-mes{color:var(--gold-lt);font-weight:500;}
 .hist-info{color:var(--muted);font-size:12px;}
 .hist-total{font-weight:600;}
@@ -778,6 +783,7 @@ window.salvarAnotacao=async function(){
 }
 
 // ── Histórico mensal ──
+var historicoCache={};
 async function renderHistorico(){
   var body=document.getElementById('hist-body');
   body.innerHTML='<div class="empty">Carregando...</div>';
@@ -787,11 +793,21 @@ async function renderHistorico(){
     var meses=[];
     snap.forEach(function(d){meses.push(Object.assign({_id:d.id},d.data()));});
     meses.sort(function(a,b){return b._id.localeCompare(a._id);});
+    historicoCache={};
+    meses.forEach(function(m){historicoCache[m._id]=m;});
     body.innerHTML=meses.map(function(m,i){
-      var reabrirBtn=i===0?'<button class="btn-reopen" onclick="reabrirMes(\''+m._id+'\')" title="Reabrir este mês">↺ Reabrir</button>':'';
-      return '<div class="hist-row"><div><div class="hist-mes">'+mesNome(m._id)+'</div><div class="hist-info">'+m.totalRegistros+' registros</div></div><div class="hist-row-right"><div class="hist-total">'+m.totalAcumulado.toFixed(1)+' kg</div>'+reabrirBtn+'</div></div>';
+      var reabrirBtn=i===0?'<button class="btn-reopen" onclick="event.stopPropagation();reabrirMes(\''+m._id+'\')" title="Reabrir este mês">↺ Reabrir</button>':'';
+      var regs=(m.registros||[]).slice().sort(function(a,b){return a.data.localeCompare(b.data);});
+      var detalhe=regs.map(function(r){return '<div class="ac-row"><span>'+fmt(r.data)+'</span><span>'+r.peso.toFixed(1)+' kg</span><span>'+(r.obs||'—')+'</span></div>';}).join('')||'<div style="padding:12px 0;font-size:12px;color:var(--muted)">Sem registros.</div>';
+      return '<div class="hist-row-wrap"><div class="hist-row" onclick="toggleHist(\''+m._id+'\')"><div><div class="hist-mes">'+mesNome(m._id)+'</div><div class="hist-info">'+m.totalRegistros+' registros</div></div><div class="hist-row-right"><div class="hist-total">'+m.totalAcumulado.toFixed(1)+' kg</div>'+reabrirBtn+'<span class="hist-expand" id="hist-arrow-'+m._id+'">▼</span></div></div><div class="hist-detail" id="hist-detail-'+m._id+'">'+detalhe+'</div></div>';
     }).join('');
   }catch(e){body.innerHTML='<div class="empty">Erro ao carregar histórico.</div>';}
+}
+window.toggleHist=function(mesId){
+  var det=document.getElementById('hist-detail-'+mesId);
+  var arrow=document.getElementById('hist-arrow-'+mesId);
+  det.classList.toggle('open');
+  arrow.classList.toggle('open');
 }
 
 window.reabrirMes=async function(mesId){
