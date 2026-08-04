@@ -168,8 +168,17 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* Histórico mensal */
 .hist-wrap{padding:16px 28px;}
+.notes-toolbar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);}
+.notes-status{font-size:11px;color:var(--muted);letter-spacing:.3px;}
+.notes-status.saving{color:var(--gold-lt);}
+.notes-status.saved{color:#7eea9b;}
+.notes-area{width:100%;min-height:420px;padding:24px 28px;background:transparent;border:none;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.7;resize:vertical;outline:none;}
+.notes-area::placeholder{color:var(--muted);}
 .hist-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:13px;}
 .hist-row:last-child{border-bottom:none;}
+.hist-row-right{display:flex;align-items:center;gap:14px;}
+.btn-reopen{background:none;border:1px solid rgba(212,175,55,.4);color:var(--gold-lt);font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer;transition:background .2s,border-color .2s;font-family:'Inter',sans-serif;}
+.btn-reopen:hover{background:rgba(201,168,76,.1);border-color:var(--gold);}
 .hist-mes{color:var(--gold-lt);font-weight:500;}
 .hist-info{color:var(--muted);font-size:12px;}
 .hist-total{font-weight:600;}
@@ -204,6 +213,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .ac-del:hover{color:#c0614a;}
 .ac-close{position:absolute;right:72px;top:20px;background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;transition:color .2s;display:flex;align-items:center;}
 .ac-close:hover{color:var(--gold-lt);}
+.ac-reopen{position:absolute;right:100px;top:20px;background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;transition:color .2s;display:flex;align-items:center;}
+.ac-reopen:hover{color:#7eea9b;}
 
 /* Bottom nav mobile */
 .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--border);z-index:100;padding-bottom:env(safe-area-inset-bottom);}
@@ -378,6 +389,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
           <span>Histórico</span>
         </div>
+        <div class="nav-item" id="nav-anotacoes" onclick="setPage('anotacoes')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2h6a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M9 7h6M9 11h6M9 15h3"/></svg>
+          <span>Anotações</span>
+        </div>
         <div class="nav-item" id="nav-admin" onclick="setPage('admin')" style="display:none">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span>Administração</span>
@@ -451,6 +466,21 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         </div>
       </div>
 
+      <!-- Anotações -->
+      <div id="page-anotacoes" class="page-section">
+        <div class="page-header">
+          <p class="page-eyebrow">Pessoal</p>
+          <h1 class="page-title">Anotações</h1>
+        </div>
+        <div class="card">
+          <div class="notes-toolbar">
+            <span id="notes-status" class="notes-status">—</span>
+            <button class="btn-add" onclick="salvarAnotacao()">Salvar</button>
+          </div>
+          <textarea id="notes-area" class="notes-area" placeholder="Escreva aqui o que quiser guardar: observações, lembretes, senhas de equipamentos, o que for útil..." oninput="onNotesInput()"></textarea>
+        </div>
+      </div>
+
       <!-- Admin -->
       <div id="page-admin" class="page-section">
         <div class="page-header">
@@ -481,6 +511,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <button class="bn-item" id="bn-historico" onclick="setPage('historico')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
       Histórico
+    </button>
+    <button class="bn-item" id="bn-anotacoes" onclick="setPage('anotacoes')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2h6a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M9 7h6M9 11h6M9 15h3"/></svg>
+      Notas
     </button>
     <button class="bn-item" id="bn-admin" onclick="setPage('admin')" style="display:none">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
@@ -590,7 +624,7 @@ function entrarDashboard(){
 
 window.logout=function(){
   if(unsubscribe){unsubscribe();unsubscribe=null;}
-  usuarioLogado=null;regsCache=[];
+  usuarioLogado=null;regsCache=[];notesLoadedFor=null;
   document.getElementById('tela-dashboard').style.display='none';
   document.getElementById('tela-login').style.display='flex';
   document.getElementById('sc-login').style.display='';
@@ -602,7 +636,7 @@ window.logout=function(){
 }
 
 // ── Navegação ──
-var pages=['pesagens','historico','admin'];
+var pages=['pesagens','historico','anotacoes','admin'];
 window.setPage=function(page){
   pages.forEach(function(p){
     var s=document.getElementById('page-'+p);
@@ -613,6 +647,7 @@ window.setPage=function(page){
     if(b)b.classList.toggle('active',p===page);
   });
   if(page==='historico')renderHistorico();
+  if(page==='anotacoes')renderAnotacao();
   if(page==='admin')renderAdmin();
 }
 
@@ -696,6 +731,52 @@ window.delReg=async function(id){
   try{await db.collection('pesagens_'+usuarioLogado).doc(id).delete();}catch(e){alert('Erro ao remover.');}
 }
 
+// ── Anotações ──
+var notesTimer=null;
+var notesLoadedFor=null;
+async function renderAnotacao(){
+  var area=document.getElementById('notes-area');
+  var status=document.getElementById('notes-status');
+  if(notesLoadedFor===usuarioLogado)return; // já carregado nesta sessão
+  area.value='Carregando...';
+  area.disabled=true;
+  try{
+    var snap=await db.collection('anotacoes').doc(usuarioLogado).get();
+    var texto=snap.exists?(snap.data().texto||''):'';
+    area.value=texto;
+    area.disabled=false;
+    notesLoadedFor=usuarioLogado;
+    status.textContent=snap.exists&&snap.data().atualizadoEm?'Última atualização: '+new Date(snap.data().atualizadoEm).toLocaleString('pt-BR'):'Nenhuma anotação ainda.';
+    status.className='notes-status';
+  }catch(e){
+    area.value='';
+    area.disabled=false;
+    status.textContent='Erro ao carregar anotações.';
+  }
+}
+window.onNotesInput=function(){
+  var status=document.getElementById('notes-status');
+  status.textContent='Digitando…';
+  status.className='notes-status saving';
+  if(notesTimer)clearTimeout(notesTimer);
+  notesTimer=setTimeout(salvarAnotacao,1200);
+}
+window.salvarAnotacao=async function(){
+  var area=document.getElementById('notes-area');
+  var status=document.getElementById('notes-status');
+  if(notesTimer){clearTimeout(notesTimer);notesTimer=null;}
+  status.textContent='Salvando…';
+  status.className='notes-status saving';
+  try{
+    await db.collection('anotacoes').doc(usuarioLogado).set({texto:area.value,atualizadoEm:new Date().toISOString()});
+    status.textContent='Salvo às '+new Date().toLocaleTimeString('pt-BR');
+    status.className='notes-status saved';
+  }catch(e){
+    status.textContent='Erro ao salvar. Tente novamente.';
+    status.className='notes-status';
+  }
+}
+
 // ── Histórico mensal ──
 async function renderHistorico(){
   var body=document.getElementById('hist-body');
@@ -706,10 +787,29 @@ async function renderHistorico(){
     var meses=[];
     snap.forEach(function(d){meses.push(Object.assign({_id:d.id},d.data()));});
     meses.sort(function(a,b){return b._id.localeCompare(a._id);});
-    body.innerHTML=meses.map(function(m){
-      return '<div class="hist-row"><div><div class="hist-mes">'+mesNome(m._id)+'</div><div class="hist-info">'+m.totalRegistros+' registros</div></div><div class="hist-total">'+m.totalAcumulado.toFixed(1)+' kg</div></div>';
+    body.innerHTML=meses.map(function(m,i){
+      var reabrirBtn=i===0?'<button class="btn-reopen" onclick="reabrirMes(\''+m._id+'\')" title="Reabrir este mês">↺ Reabrir</button>':'';
+      return '<div class="hist-row"><div><div class="hist-mes">'+mesNome(m._id)+'</div><div class="hist-info">'+m.totalRegistros+' registros</div></div><div class="hist-row-right"><div class="hist-total">'+m.totalAcumulado.toFixed(1)+' kg</div>'+reabrirBtn+'</div></div>';
     }).join('');
   }catch(e){body.innerHTML='<div class="empty">Erro ao carregar histórico.</div>';}
+}
+
+window.reabrirMes=async function(mesId){
+  if(!confirm('Reabrir '+mesNome(mesId)+'? Os registros arquivados voltam para Pesagens Diárias e o mês some do histórico.'))return;
+  try{
+    var doc=await db.collection('historico_'+usuarioLogado).doc(mesId).get();
+    if(!doc.exists){alert('Este mês não foi encontrado no histórico.');renderHistorico();return;}
+    var dados=doc.data();
+    var regs=dados.registros||[];
+    var adds=regs.map(function(r){
+      return db.collection('pesagens_'+usuarioLogado).add({data:r.data,peso:r.peso,obs:r.obs||''});
+    });
+    await Promise.all(adds);
+    await db.collection('historico_'+usuarioLogado).doc(mesId).delete();
+    await db.collection('config_'+usuarioLogado).doc('meta').set({ultimoFechamento:null},{merge:true});
+    renderHistorico();
+    alert('Mês reaberto! Os registros voltaram para Pesagens Diárias.');
+  }catch(e){alert('Erro ao reabrir o mês.');}
 }
 
 // ── Fechamento mensal ──
@@ -756,6 +856,27 @@ window.confirmarFechamento=async function(){
 }
 
 // ── Admin ──
+window.reabrirMesUsuario=async function(u,event){
+  if(event)event.stopPropagation();
+  try{
+    var snap=await db.collection('historico_'+u).get();
+    if(snap.empty){alert('Usuário "'+u+'" não tem meses arquivados.');return;}
+    var meses=[];
+    snap.forEach(function(d){meses.push(Object.assign({_id:d.id},d.data()));});
+    meses.sort(function(a,b){return b._id.localeCompare(a._id);});
+    var ultimo=meses[0];
+    if(!confirm('Reabrir '+mesNome(ultimo._id)+' de "'+u+'"? Os registros voltam para os dados em aberto dele.'))return;
+    var regs=ultimo.registros||[];
+    var adds=regs.map(function(r){
+      return db.collection('pesagens_'+u).add({data:r.data,peso:r.peso,obs:r.obs||''});
+    });
+    await Promise.all(adds);
+    await db.collection('historico_'+u).doc(ultimo._id).delete();
+    await db.collection('config_'+u).doc('meta').set({ultimoFechamento:null},{merge:true});
+    alert('Mês de "'+u+'" reaberto com sucesso!');
+    renderAdmin();
+  }catch(e){alert('Erro ao reabrir o mês de "'+u+'".');}
+}
 window.fecharMesUsuario=async function(u,event){
   if(event)event.stopPropagation();
   try{
@@ -825,7 +946,7 @@ window.renderAdmin=async function(){
       var media=total?(regs.reduce(function(s,r){return s+r.peso;},0)/total).toFixed(1)+' kg':'—';
       var ultima=total?regs[0].peso.toFixed(1)+' kg':'—';
       var rows=regs.slice(0,20).map(function(r){return '<div class="ac-row"><span>'+fmt(r.data)+'</span><span>'+r.peso.toFixed(1)+' kg</span><span>'+(r.obs||'—')+'</span></div>';}).join('')||'<div style="padding:12px 0;font-size:12px;color:var(--muted)">Sem registros.</div>';
-      return '<div class="admin-card" id="ac-'+u+'" onclick="toggleAc(\''+u+'\')"><div class="ac-head"><div class="ac-avatar">'+u.substring(0,2).toUpperCase()+'</div><div><div class="ac-name">'+u+'</div></div><span class="ac-badge">Usuário</span></div><div class="ac-meta">'+total+' registro'+(total!==1?'s':'')+'</div><div class="ac-stats"><div><div class="ac-sv">'+ultima+'</div><div class="ac-sl">Última</div></div><div><div class="ac-sv">'+media+'</div><div class="ac-sl">Média</div></div><div><div class="ac-sv">'+total+'</div><div class="ac-sl">Total</div></div></div><div class="ac-regs" id="ac-regs-'+u+'">'+rows+'</div><button class="ac-close" title="Fechar mês deste usuário" onclick="fecharMesUsuario(\''+u+'\',event)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg></button><button class="ac-del" onclick="removerUsuario(\''+u+'\',event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button><div class="ac-expand">▼</div></div>';
+      return '<div class="admin-card" id="ac-'+u+'" onclick="toggleAc(\''+u+'\')"><div class="ac-head"><div class="ac-avatar">'+u.substring(0,2).toUpperCase()+'</div><div><div class="ac-name">'+u+'</div></div><span class="ac-badge">Usuário</span></div><div class="ac-meta">'+total+' registro'+(total!==1?'s':'')+'</div><div class="ac-stats"><div><div class="ac-sv">'+ultima+'</div><div class="ac-sl">Última</div></div><div><div class="ac-sv">'+media+'</div><div class="ac-sl">Média</div></div><div><div class="ac-sv">'+total+'</div><div class="ac-sl">Total</div></div></div><div class="ac-regs" id="ac-regs-'+u+'">'+rows+'</div><button class="ac-reopen" title="Reabrir último mês deste usuário" onclick="reabrirMesUsuario(\''+u+'\',event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button><button class="ac-close" title="Fechar mês deste usuário" onclick="fecharMesUsuario(\''+u+'\',event)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg></button><button class="ac-del" onclick="removerUsuario(\''+u+'\',event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button><div class="ac-expand">▼</div></div>';
     }));
     grid.innerHTML=cards.join('');
   }catch(e){grid.innerHTML='<div class="empty">Erro ao carregar.</div>';}
