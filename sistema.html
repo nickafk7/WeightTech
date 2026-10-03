@@ -174,6 +174,8 @@ main{max-width:880px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-rig
 }
 
 .done.ok:disabled{opacity:1;cursor:default}
+
+.done.lock{opacity:.65;border-style:dashed;cursor:not-allowed;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -316,6 +318,7 @@ const S={novo:{sem:[...TODOS],data:null},edit:null};
 let janela=30;
 const NF=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const porHora=(a,b)=>(a.hora||'').localeCompare(b.hora||'');
+const hhmm=()=>{const n=new Date();return pad(n.getHours())+':'+pad(n.getMinutes())};
 const FIM='9999-99-99';
 function proxima(t,h){if(t.data)return t.data>h?t.data:FIM;for(let i=1;i<=7;i++){const d=addD(h,i);if(agendada(t,d))return d}return FIM}
 function ordenadas(){const h=hoje();const k=t=>agendada(t,h)?'0'+(t.hora||''):'1'+proxima(t,h)+(t.hora||'');return [...tarefas].sort((a,b)=>k(a).localeCompare(k(b)))}
@@ -409,7 +412,7 @@ function vHoje(){
   const lista=tarefas.length?ordenadas().map(t=>{
     const s=streak(t),on=agendada(t,h),f=t.dias.includes(h);
     const dias=[...Array(7)].map((_,k)=>{const d=addD(h,k-6);return `<div class="d ${t.dias.includes(d)?'h':''} ${agendada(t,d)?'':'x'}"><i></i>${'DSTQQSS'[wd(d)]}</div>`}).join('');
-    const btn=on?(f?`<button class="done ok" disabled aria-label="Feito. Não pode ser desfeito.">Feito ✓</button>`:`<button class="done" data-a="tog" data-id="${t.id}">Fiz hoje</button>`):`<span class="off">${(()=>{const p=proxima(t,h);return p===FIM?'Não é hoje':'Próxima: '+NOMES[wd(p)]+' '+fmt(p).slice(0,5)})()}</span>`;
+    const btn=on?(f?`<button class="done ok" disabled aria-label="Feito. Não pode ser desfeito.">Feito ✓</button>`:(hhmm()>=(t.hora||'00:00')?`<button class="done" data-a="tog" data-id="${t.id}">Fiz hoje</button>`:`<button class="done lock" disabled data-h="${esc(t.hora||'00:00')}" aria-label="Libera às ${esc(t.hora)}">Às ${esc(t.hora)}</button>`)):`<span class="off">${(()=>{const p=proxima(t,h);return p===FIM?'Não é hoje':'Próxima: '+NOMES[wd(p)]+' '+fmt(p).slice(0,5)})()}</span>`;
     return `<div class="task ${on?'':'dim'}"><div class="top">
       <div class="flame ${s>0&&f?'on':''}">🔥</div>
       <div class="info"><div class="name">${esc(t.nome)}</div><div class="meta"><b>${s} ${s===1?'dia':'dias'}</b> seguidos · recorde ${recorde(t)}</div><div class="meta">${esc(rotulo(t))} · ${esc(t.hora)}</div></div>
@@ -490,7 +493,7 @@ $('view').addEventListener('click',async e=>{
   const b=e.target.closest('button[data-a]');if(!b)return;
   const a=b.dataset.a,t=tarefas.find(x=>x.id===b.dataset.id);
   try{
-    if(a==='tog'&&t){const h=hoje();if(t.dias.includes(h))return;if(!confirm('Marcar como feito? Depois não dá para desfazer.'))return;await habits().doc(t.id).update({dias:FV.arrayUnion(h)})}
+    if(a==='tog'&&t){const h=hoje();if(t.dias.includes(h))return;if(hhmm()<(t.hora||'00:00')){alert('Esta tarefa só libera às '+t.hora+'.');render();return}if(!confirm('Marcar como feito? Depois não dá para desfazer.'))return;await habits().doc(t.id).update({dias:FV.arrayUnion(h)})}
     else if(a==='del'&&t){if(confirm('Excluir esta tarefa e sua sequência?'))await habits().doc(t.id).delete()}
     else if(a==='add')await criar();
     else if(a==='dia'||a==='preset')pick(b);
@@ -542,6 +545,7 @@ function checar(){
   });
 }
 setInterval(checar,30000);
+setInterval(()=>{if(!user||aba!=='hoje')return;const n=hhmm();if([...document.querySelectorAll('.done.lock')].some(b=>b.dataset.h<=n))render()},15000);
 </script>
 </body>
 </html>
