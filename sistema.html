@@ -97,8 +97,6 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
     <button class="lnk" id="aR">Esqueci a senha</button>
     <div class="err" id="aE"></div>
     <button class="btn" id="aB">Entrar</button>
-    <div class="sep">ou</div>
-    <button class="btn ghost" id="aG">Continuar com Google</button>
     <div class="alt"><span id="aA">Ainda não tem conta?</span> <button id="aX">Criar conta</button></div>
   </div>
 </section>
@@ -121,7 +119,7 @@ setTimeout(function(){if(!window.__ok){var e=document.getElementById('aE');if(e)
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail, updateProfile, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -187,7 +185,6 @@ async function enviar(){
 }
 $('aB').onclick=enviar;
 ['em','pw','nm'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter')enviar()}));
-$('aG').onclick=async()=>{$('aE').textContent='';try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(e){erro(e)}};
 $('aR').onclick=async()=>{
   const email=$('em').value.trim();
   if(!/^\S+@\S+\.\S+$/.test(email))return $('aE').textContent='Digite seu e-mail acima para receber o link.';
@@ -315,20 +312,4 @@ function renderNotif(){
   const el=$('notif');if(!el)return;
   if(!('Notification' in window)){el.innerHTML='<span>Este navegador não suporta notificações.</span>';return}
   const p=Notification.permission;
-  el.innerHTML=p==='granted'?'<span>Lembretes ativos. Mantenha esta aba aberta.</span>':p==='denied'?'<span>Notificações bloqueadas. Libere nas configurações do site.</span>':'<span>Ative os lembretes para não esquecer.</span><button id="perm">Ativar</button>';
-  const b=$('perm');if(b)b.onclick=()=>Notification.requestPermission().then(renderNotif);
-}
-function checar(){
-  if(!user)return;
-  const now=new Date(),h=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  tarefas.forEach(t=>{
-    if(t.dias.includes(hoje())||h<t.hora)return;
-    if(avisos.has(t.id)&&Date.now()-avisos.get(t.id)<30*60000)return;
-    avisos.set(t.id,Date.now());
-    try{if('Notification' in window&&Notification.permission==='granted')new Notification('Disciplina',{body:`Você ainda não fez "${t.nome}". Sua sequência de ${streak(t)} dias está em risco.`})}catch(e){}
-  });
-}
-setInterval(checar,30000);
-</script>
-</body>
-</html>
+  el.innerHTML=p==='granted'?'<span>Lembretes ativos. Mantenha esta aba aberta.</span>':p==='denied'?'<span>Notificações bloqueadas. Libere nas configuraç
