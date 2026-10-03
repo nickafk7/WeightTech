@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -83,6 +82,22 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
 .prof{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .prof .av{width:56px;height:56px;font-size:22px}
 .acts{display:flex;flex-direction:column;gap:10px;max-width:320px}
+
+.chips{display:flex;gap:6px;margin:0 0 8px}
+.chip{flex:1;padding:9px 0;border-radius:9px;border:1px solid var(--line);color:var(--mut);font-size:13px;font-weight:600}
+.chip.on{background:var(--ac);color:#0a0a0a;border-color:var(--ac)}
+.presets{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.pre{padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--mut);font-size:13px}
+.pre.on{border-color:var(--ac);color:var(--tx)}
+.d.x{opacity:.3}
+.task.dim{opacity:.6}
+.off{color:var(--mut);font-size:13px;flex:none}
+.a2{display:flex;gap:16px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:grid;place-items:center;padding:16px;z-index:20}
+.mbox{width:100%;max-width:420px;background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:18px}
+.mbox h3{margin-bottom:14px}
+.mrow{display:flex;gap:8px;margin-top:6px}
+.mrow .btn{flex:1}
 </style>
 </head>
 <body>
@@ -115,6 +130,14 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
   <main id="view"></main>
 </div>
 
+<div id="modal" class="hide"><div class="mbox" role="dialog" aria-modal="true" aria-label="Editar tarefa">
+  <h3>Editar tarefa</h3>
+  <div class="f"><label for="eN">Nome</label><input id="eN" maxlength="60"></div>
+  <div class="f"><label for="eH">Horário do lembrete</label><input id="eH" type="time"></div>
+  <div class="f"><label>Dias</label><div id="chipsEdit"></div></div>
+  <div class="err" id="eE"></div>
+  <div class="mrow"><button class="btn ghost" data-a="cancel">Cancelar</button><button class="btn" data-a="save">Salvar</button></div>
+</div></div>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -212,35 +235,108 @@ function start(){
 }
 
 /* ---------- lógica ---------- */
-function streak(t){let d=hoje(),n=0;if(!t.dias.includes(d))d=addD(d,-1);while(t.dias.includes(d)){n++;d=addD(d,-1)}return n}
-function recorde(t){const s=[...t.dias].sort();let b=0,c=0,p=null;for(const d of s){c=(p&&addD(p,1)===d)?c+1:1;b=Math.max(b,c);p=d}return b}
+const TODOS=[0,1,2,3,4,5,6], NOMES=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const S={novo:{sem:[...TODOS],unico:false},edit:null};
+const wd=d=>new Date(d+'T12:00:00').getDay();
+const agendada=(t,d)=>t.data?t.data===d:(t.sem||TODOS).includes(wd(d));
+function rotulo(t){
+  if(t.data)return t.data===hoje()?'Só hoje':'Só em '+fmt(t.data).slice(0,5);
+  const s=[...(t.sem||TODOS)].sort();
+  if(s.length===7)return 'Todos os dias';
+  if(s.join()==='1,2,3,4,5')return 'Seg–Sex';
+  if(s.join()==='0,6')return 'Fins de semana';
+  return s.map(i=>NOMES[i]).join(', ');
+}
+function streak(t){
+  if(t.data)return t.dias.length?1:0;
+  let d=hoje(),n=0;
+  if(agendada(t,d)&&!t.dias.includes(d))d=addD(d,-1);
+  for(let i=0;i<800;i++){
+    if(agendada(t,d)){if(t.dias.includes(d))n++;else break}
+    d=addD(d,-1);
+  }
+  return n;
+}
+function recorde(t){
+  if(t.data)return t.dias.length?1:0;
+  if(!t.dias.length)return 0;
+  const end=hoje();let d=[...t.dias].sort()[0],c=0,b=0;
+  for(let i=0;i<1500&&d<=end;i++){
+    if(agendada(t,d)){if(t.dias.includes(d)){c++;b=Math.max(b,c)}else c=0}
+    d=addD(d,1);
+  }
+  return b;
+}
+function seletor(st){
+  const chips=NOMES.map((n,i)=>`<button type="button" class="chip ${!st.unico&&st.sem.includes(i)?'on':''}" data-a="dia" data-w="${i}">${n}</button>`).join('');
+  const sel=st.unico?'hoje':st.sem.length===7?'todos':st.sem.join()==='1,2,3,4,5'?'util':'';
+  const pre=[['todos','Todos os dias'],['util','Seg–Sex'],['hoje','Só hoje']].map(([p,l])=>`<button type="button" class="pre ${sel===p?'on':''}" data-a="preset" data-p="${p}">${l}</button>`).join('');
+  return `<div class="chips">${chips}</div><div class="presets">${pre}</div>`;
+}
+function pintar(k){const el=$(k==='edit'?'chipsEdit':'chipsNovo');if(el)el.innerHTML=seletor(S[k])}
+function pick(b){
+  const k=b.closest('#modal')?'edit':'novo',st=S[k];
+  if(b.dataset.a==='dia'){
+    const w=+b.dataset.w;
+    if(st.unico){st.unico=false;st.sem=[w]}
+    else st.sem=st.sem.includes(w)?st.sem.filter(x=>x!==w):[...st.sem,w].sort();
+  }else{
+    const p=b.dataset.p;
+    if(p==='todos'){st.unico=false;st.sem=[...TODOS]}
+    else if(p==='util'){st.unico=false;st.sem=[1,2,3,4,5]}
+    else st.unico=true;
+  }
+  pintar(k);
+}
+function abrirEdit(t){
+  S.edit={id:t.id,sem:[...(t.sem||TODOS)],unico:!!t.data,data:t.data||null};
+  $('eN').value=t.nome;$('eH').value=t.hora;$('eE').textContent='';
+  pintar('edit');$('modal').classList.remove('hide');$('eN').focus();
+}
+$('modal').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-a]');
+  if(e.target.id==='modal'||(b&&b.dataset.a==='cancel')){$('modal').classList.add('hide');return}
+  if(!b)return;
+  if(b.dataset.a==='dia'||b.dataset.a==='preset')return pick(b);
+  if(b.dataset.a==='save'){
+    const st=S.edit,nome=$('eN').value.trim();
+    if(!nome)return $('eE').textContent='Digite o nome da tarefa.';
+    if(!st.unico&&!st.sem.length)return $('eE').textContent='Escolha pelo menos um dia.';
+    b.disabled=true;
+    try{await habits().doc(st.id).update({nome,hora:$('eH').value||'20:00',sem:st.sem,data:st.unico?(st.data||hoje()):null});$('modal').classList.add('hide')}
+    catch(err){console.error(err);$('eE').textContent='Não foi possível salvar. Tente novamente.'}
+    b.disabled=false;
+  }
+});
 
 /* ---------- views ---------- */
 $('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;aba=b.dataset.v;render()};
 function render(){
   if(!user)return;
   [...$('nav').children].forEach(b=>b.classList.toggle('on',b.dataset.v===aba));
-  const foco=document.activeElement&&document.activeElement.id==='nome'?$('nome').value:null;
+  const en=$('nome'),eh=$('hora'),vn=en?en.value:'',vh=eh?eh.value:'',foco=!!en&&document.activeElement===en;
   $('view').innerHTML=aba==='hoje'?vHoje():aba==='hist'?vHist():vPerfil();
-  if(aba==='hoje'){renderNotif();if(foco!==null){$('nome').value=foco;$('nome').focus()}}
+  if(aba==='hoje'){renderNotif();if(vn)$('nome').value=vn;if(vh)$('hora').value=vh;if(foco)$('nome').focus()}
 }
 function vHoje(){
-  const h=hoje(), feitas=tarefas.filter(t=>t.dias.includes(h)).length;
+  const h=hoje(), ag=tarefas.filter(t=>agendada(t,h)), feitas=ag.filter(t=>t.dias.includes(h)).length;
   const melhor=Math.max(0,...tarefas.map(streak));
   const hr=new Date().getHours(), sd=hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite';
   const lista=tarefas.length?tarefas.map(t=>{
-    const s=streak(t),f=t.dias.includes(h);
-    const dias=[...Array(7)].map((_,k)=>{const d=addD(h,k-6);return `<div class="d ${t.dias.includes(d)?'h':''}"><i></i>${'DSTQQSS'[new Date(d+'T12:00:00').getDay()]}</div>`}).join('');
-    return `<div class="task"><div class="top">
+    const s=streak(t),on=agendada(t,h),f=t.dias.includes(h);
+    const dias=[...Array(7)].map((_,k)=>{const d=addD(h,k-6);return `<div class="d ${t.dias.includes(d)?'h':''} ${agendada(t,d)?'':'x'}"><i></i>${'DSTQQSS'[wd(d)]}</div>`}).join('');
+    const btn=on?`<button class="done ${f?'ok':''}" data-a="tog" data-id="${t.id}">${f?'Feito ✓':'Fiz hoje'}</button>`:`<span class="off">Não é hoje</span>`;
+    return `<div class="task ${on?'':'dim'}"><div class="top">
       <div class="flame ${s>0&&f?'on':''}">🔥</div>
-      <div class="info"><div class="name">${esc(t.nome)}</div><div class="meta"><b>${s} ${s===1?'dia':'dias'}</b> seguidos · recorde ${recorde(t)} · ${esc(t.hora)}</div></div>
-      <button class="done ${f?'ok':''}" data-a="tog" data-id="${t.id}">${f?'Feito ✓':'Fiz hoje'}</button></div>
+      <div class="info"><div class="name">${esc(t.nome)}</div><div class="meta"><b>${s} ${s===1?'dia':'dias'}</b> seguidos · recorde ${recorde(t)}</div><div class="meta">${esc(rotulo(t))} · ${esc(t.hora)}</div></div>
+      ${btn}</div>
       <div class="week">${dias}</div>
-      <div class="row2"><span>${t.dias.length} dias no total</span><button data-a="del" data-id="${t.id}">Excluir</button></div></div>`;
+      <div class="row2"><span>${t.dias.length} dias no total</span><span class="a2"><button data-a="edit" data-id="${t.id}">Editar</button><button data-a="del" data-id="${t.id}">Excluir</button></span></div></div>`;
   }).join(''):'<div class="empty">Nenhuma tarefa ainda. Crie a primeira acima.</div>';
-  return `<h2>${sd}, ${esc(nomeUser().split(' ')[0])}</h2><p class="sub">${tarefas.length?(feitas===tarefas.length?'Tudo feito por hoje.':`Faltam ${tarefas.length-feitas} para hoje.`):'Comece criando uma tarefa diária.'}</p>
-  <div class="stats"><div class="st"><b>${feitas}/${tarefas.length}</b><span>Feitas hoje</span></div><div class="st"><b>${melhor}</b><span>Maior sequência atual</span></div><div class="st"><b>${tarefas.reduce((a,t)=>a+t.dias.length,0)}</b><span>Dias concluídos</span></div></div>
-  <div class="add"><input id="nome" placeholder="Nova tarefa diária" maxlength="60" aria-label="Nome da tarefa"><input id="hora" type="time" value="20:00" aria-label="Horário do lembrete"><button class="btn" data-a="add">Criar</button></div>
+  return `<h2>${sd}, ${esc(nomeUser().split(' ')[0])}</h2><p class="sub">${ag.length?(feitas===ag.length?'Tudo feito por hoje.':`Faltam ${ag.length-feitas} para hoje.`):(tarefas.length?'Nenhuma tarefa para hoje.':'Comece criando uma tarefa.')}</p>
+  <div class="stats"><div class="st"><b>${feitas}/${ag.length}</b><span>Feitas hoje</span></div><div class="st"><b>${melhor}</b><span>Maior sequência atual</span></div><div class="st"><b>${tarefas.reduce((a,t)=>a+t.dias.length,0)}</b><span>Dias concluídos</span></div></div>
+  <div class="add"><input id="nome" placeholder="Nova tarefa" maxlength="60" aria-label="Nome da tarefa"><input id="hora" type="time" value="20:00" aria-label="Horário do lembrete"><button class="btn" data-a="add">Criar</button></div>
+  <div id="chipsNovo">${seletor(S.novo)}</div>
   <div class="notif" id="notif"></div>${lista}`;
 }
 function vHist(){
@@ -248,9 +344,9 @@ function vHist(){
   const first=new Date(addD(h,-(total-1))+'T12:00:00').getDay();
   let cells='<div></div>'.repeat(first);
   for(let k=total-1;k>=0;k--){
-    const d=addD(h,-k),q=tarefas.filter(t=>t.dias.includes(d)).length,r=q/n;
+    const d=addD(h,-k),ag=tarefas.filter(t=>agendada(t,d)),q=ag.filter(t=>t.dias.includes(d)).length,r=q/Math.max(ag.length,1);
     const l=q===0?0:r<.34?1:r<.67?2:r<1?3:4;
-    cells+=`<div class="c" data-l="${l}" title="${fmt(d)}: ${q} de ${tarefas.length}"></div>`;
+    cells+=`<div class="c" data-l="${l}" title="${fmt(d)}: ${q} de ${ag.length}"></div>`;
   }
   let log='';
   for(let k=0;k<60;k++){
@@ -284,6 +380,8 @@ $('view').addEventListener('click',async e=>{
     if(a==='tog'&&t){const h=hoje();await habits().doc(t.id).update({dias:t.dias.includes(h)?FV.arrayRemove(h):FV.arrayUnion(h)})}
     else if(a==='del'&&t){if(confirm('Excluir esta tarefa e sua sequência?'))await habits().doc(t.id).delete()}
     else if(a==='add')await criar();
+    else if(a==='dia'||a==='preset')pick(b);
+    else if(a==='edit'&&t)abrirEdit(t);
     else if(a==='nome'){const v=$('pn').value.trim();if(v){await user.updateProfile({displayName:v});await db.collection('users').doc(user.uid).set({nome:v},{merge:true});$('avt').textContent=v[0].toUpperCase();render()}}
     else if(a==='sair')await auth.signOut();
     else if(a==='exp')exportar();
@@ -293,8 +391,10 @@ $('view').addEventListener('click',async e=>{
 $('view').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nome')criar()});
 async function criar(){
   const nome=$('nome').value.trim();if(!nome){$('nome').focus();return}
+  if(!S.novo.unico&&!S.novo.sem.length)return alert('Escolha pelo menos um dia da semana.');
   const hora=$('hora').value||'20:00';$('nome').value='';
-  await habits().add({nome,hora,dias:[],criada:hoje(),ts:Date.now()});
+  await habits().add({nome,hora,dias:[],criada:hoje(),ts:Date.now(),sem:S.novo.sem,data:S.novo.unico?hoje():null});
+  S.novo={sem:[...TODOS],unico:false};pintar('novo');
   if('Notification' in window&&Notification.permission==='default')Notification.requestPermission().then(()=>{if(aba==='hoje')renderNotif()});
 }
 function exportar(){
@@ -321,7 +421,7 @@ function checar(){
   if(!user)return;
   const now=new Date(),h=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
   tarefas.forEach(t=>{
-    if(t.dias.includes(hoje())||h<t.hora)return;
+    if(t.dias.includes(hoje())||!agendada(t,hoje())||h<t.hora)return;
     if(avisos.has(t.id)&&Date.now()-avisos.get(t.id)<30*60000)return;
     avisos.set(t.id,Date.now());
     try{if('Notification' in window&&Notification.permission==='granted')new Notification('Disciplina',{body:`Você ainda não fez "${t.nome}". Sua sequência de ${streak(t)} dias está em risco.`})}catch(e){}
