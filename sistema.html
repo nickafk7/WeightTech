@@ -110,6 +110,10 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
 .it .hr{margin-left:auto;color:var(--mut);font-size:13px;flex:none}
 .it .nm{overflow-wrap:anywhere}
 .seg{display:flex;gap:8px;margin-bottom:16px}
+
+.dia{scroll-margin-top:70px}
+.presets .dt{width:auto;padding:6px 12px;border-radius:999px;font-size:13px;color-scheme:dark;color:var(--mut)}
+.presets .dt.on{border-color:var(--ac);color:var(--tx)}
 </style>
 </head>
 <body>
@@ -249,11 +253,13 @@ function start(){
 
 /* ---------- lógica ---------- */
 const TODOS=[0,1,2,3,4,5,6], NOMES=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-const S={novo:{sem:[...TODOS],unico:false},edit:null};
-let ordem='desc',janela=30;
+const S={novo:{sem:[...TODOS],data:null},edit:null};
+let janela=30;
 const NF=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const porHora=(a,b)=>(a.hora||'').localeCompare(b.hora||'');
-function ordenadas(){const h=hoje();return [...tarefas].sort((a,b)=>(agendada(b,h)-agendada(a,h))||porHora(a,b))}
+const FIM='9999-99-99';
+function proxima(t,h){if(t.data)return t.data>h?t.data:FIM;for(let i=1;i<=7;i++){const d=addD(h,i);if(agendada(t,d))return d}return FIM}
+function ordenadas(){const h=hoje();const k=t=>agendada(t,h)?'0'+(t.hora||''):'1'+proxima(t,h)+(t.hora||'');return [...tarefas].sort((a,b)=>k(a).localeCompare(k(b)))}
 const wd=d=>new Date(d+'T12:00:00').getDay();
 const agendada=(t,d)=>t.data?t.data===d:(t.sem||TODOS).includes(wd(d));
 function rotulo(t){
@@ -285,28 +291,29 @@ function recorde(t){
   return b;
 }
 function seletor(st){
-  const chips=NOMES.map((n,i)=>`<button type="button" class="chip ${!st.unico&&st.sem.includes(i)?'on':''}" data-a="dia" data-w="${i}">${n}</button>`).join('');
-  const sel=st.unico?'hoje':st.sem.length===7?'todos':st.sem.join()==='1,2,3,4,5'?'util':'';
+  const chips=NOMES.map((n,i)=>`<button type="button" class="chip ${!st.data&&st.sem.includes(i)?'on':''}" data-a="dia" data-w="${i}">${n}</button>`).join('');
+  const sel=st.data?(st.data===hoje()?'hoje':'data'):st.sem.length===7?'todos':st.sem.join()==='1,2,3,4,5'?'util':'';
   const pre=[['todos','Todos os dias'],['util','Seg–Sex'],['hoje','Só hoje']].map(([p,l])=>`<button type="button" class="pre ${sel===p?'on':''}" data-a="preset" data-p="${p}">${l}</button>`).join('');
-  return `<div class="chips">${chips}</div><div class="presets">${pre}</div>`;
+  return `<div class="chips">${chips}</div><div class="presets">${pre}<input type="date" class="dt ${sel==='data'?'on':''}" data-a="data" value="${st.data||''}" aria-label="Escolher uma data"></div>`;
 }
 function pintar(k){const el=$(k==='edit'?'chipsEdit':'chipsNovo');if(el)el.innerHTML=seletor(S[k])}
 function pick(b){
   const k=b.closest('#modal')?'edit':'novo',st=S[k];
   if(b.dataset.a==='dia'){
     const w=+b.dataset.w;
-    if(st.unico){st.unico=false;st.sem=[w]}
+    if(st.data){st.data=null;st.sem=[w]}
     else st.sem=st.sem.includes(w)?st.sem.filter(x=>x!==w):[...st.sem,w].sort();
   }else{
     const p=b.dataset.p;
-    if(p==='todos'){st.unico=false;st.sem=[...TODOS]}
-    else if(p==='util'){st.unico=false;st.sem=[1,2,3,4,5]}
-    else st.unico=true;
+    if(p==='todos'){st.data=null;st.sem=[...TODOS]}
+    else if(p==='util'){st.data=null;st.sem=[1,2,3,4,5]}
+    else st.data=hoje();
   }
   pintar(k);
 }
+document.addEventListener('change',e=>{const el=e.target;if(!el.matches||!el.matches('input[data-a="data"]'))return;const k=el.closest('#modal')?'edit':'novo';S[k].data=el.value||null;pintar(k)});
 function abrirEdit(t){
-  S.edit={id:t.id,sem:[...(t.sem||TODOS)],unico:!!t.data,data:t.data||null};
+  S.edit={id:t.id,sem:[...(t.sem||TODOS)],data:t.data||null};
   $('eN').value=t.nome;$('eH').value=t.hora;$('eE').textContent='';
   pintar('edit');$('modal').classList.remove('hide');$('eN').focus();
 }
@@ -318,16 +325,16 @@ $('modal').addEventListener('click',async e=>{
   if(b.dataset.a==='save'){
     const st=S.edit,nome=$('eN').value.trim();
     if(!nome)return $('eE').textContent='Digite o nome da tarefa.';
-    if(!st.unico&&!st.sem.length)return $('eE').textContent='Escolha pelo menos um dia.';
+    if(!st.data&&!st.sem.length)return $('eE').textContent='Escolha pelo menos um dia.';
     b.disabled=true;
-    try{await habits().doc(st.id).update({nome,hora:$('eH').value||'20:00',sem:st.sem,data:st.unico?(st.data||hoje()):null});$('modal').classList.add('hide')}
+    try{await habits().doc(st.id).update({nome,hora:$('eH').value||'20:00',sem:st.sem,data:st.data||null});$('modal').classList.add('hide')}
     catch(err){console.error(err);$('eE').textContent='Não foi possível salvar. Tente novamente.'}
     b.disabled=false;
   }
 });
 
 /* ---------- views ---------- */
-$('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;aba=b.dataset.v;render()};
+$('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;aba=b.dataset.v;render();if(aba==='tempo'){const el=$('hojeBloco');if(el)el.scrollIntoView()}else window.scrollTo(0,0)};
 function render(){
   if(!user)return;
   [...$('nav').children].forEach(b=>b.classList.toggle('on',b.dataset.v===aba));
@@ -342,7 +349,7 @@ function vHoje(){
   const lista=tarefas.length?ordenadas().map(t=>{
     const s=streak(t),on=agendada(t,h),f=t.dias.includes(h);
     const dias=[...Array(7)].map((_,k)=>{const d=addD(h,k-6);return `<div class="d ${t.dias.includes(d)?'h':''} ${agendada(t,d)?'':'x'}"><i></i>${'DSTQQSS'[wd(d)]}</div>`}).join('');
-    const btn=on?`<button class="done ${f?'ok':''}" data-a="tog" data-id="${t.id}">${f?'Feito ✓':'Fiz hoje'}</button>`:`<span class="off">Não é hoje</span>`;
+    const btn=on?`<button class="done ${f?'ok':''}" data-a="tog" data-id="${t.id}">${f?'Feito ✓':'Fiz hoje'}</button>`:`<span class="off">${(()=>{const p=proxima(t,h);return p===FIM?'Não é hoje':'Próxima: '+NOMES[wd(p)]+' '+fmt(p).slice(0,5)})()}</span>`;
     return `<div class="task ${on?'':'dim'}"><div class="top">
       <div class="flame ${s>0&&f?'on':''}">🔥</div>
       <div class="info"><div class="name">${esc(t.nome)}</div><div class="meta"><b>${s} ${s===1?'dia':'dias'}</b> seguidos · recorde ${recorde(t)}</div><div class="meta">${esc(rotulo(t))} · ${esc(t.hora)}</div></div>
@@ -377,28 +384,32 @@ function vHist(){
 }
 function vTempo(){
   const h=hoje();
-  const inicio=tarefas.reduce((m,t)=>{const c=t.criada||h;return c<m?c:m},h);
-  let blocos=[];
-  for(let k=0;k<janela;k++){
-    const d=addD(h,-k);
-    if(d<inicio)break;
-    const feitas=tarefas.filter(t=>t.dias.includes(d)).sort(porHora);
-    const falt=tarefas.filter(t=>agendada(t,d)&&d>=(t.criada||d)&&!t.dias.includes(d)).sort(porHora);
+  const inicio=tarefas.reduce((m,t)=>{const c=t.data&&t.data<(t.criada||h)?t.data:(t.criada||h);return c<m?c:m},h);
+  const ini=addD(h,-janela), start=ini>inicio?ini:inicio;
+  const lim=addD(h,90);
+  const fim=tarefas.reduce((m,t)=>t.data&&t.data>m&&t.data<=lim?t.data:m,h);
+  const blocos=[];
+  for(let d=start,i=0;d<=fim&&i<400;d=addD(d,1),i++){
+    let feitas,falt;
+    if(d>h){feitas=[];falt=tarefas.filter(t=>t.data===d)}
+    else{
+      feitas=tarefas.filter(t=>t.dias.includes(d));
+      falt=tarefas.filter(t=>agendada(t,d)&&(t.data||d>=(t.criada||d))&&!t.dias.includes(d));
+    }
+    feitas.sort(porHora);falt.sort(porHora);
     if(feitas.length||falt.length)blocos.push({d,feitas,falt});
   }
-  if(ordem==='asc')blocos.reverse();
-  const mais=addD(h,-janela)>=inicio;
+  const alvo=blocos.find(b=>b.d>=h);
   const html=blocos.map(({d,feitas,falt})=>{
-    const tag=d===h?'Hoje':d===addD(h,-1)?'Ontem':'';
+    const tag=d===h?'Hoje':d===addD(h,-1)?'Ontem':d===addD(h,1)?'Amanhã':'';
     const total=feitas.length+falt.length;
     const it=(t,c,m)=>`<div class="it ${c}"><span class="m">${m}</span><span class="nm">${esc(t.nome)}</span><span class="hr">${esc(t.hora||'')}</span></div>`;
-    const rows=[...feitas.map(t=>it(t,'ok','✓')),...falt.map(t=>it(t,d===h?'pe':'no',d===h?'○':'✕'))].join('');
-    return `<div class="dia"><div class="dh"><b>${NF[wd(d)]}, ${fmt(d).slice(0,5)}${tag?' · '+tag:''}</b><small>${feitas.length}/${total}</small></div>${rows}</div>`;
+    const rows=[...feitas.map(t=>it(t,'ok','✓')),...falt.map(t=>it(t,d>=h?'pe':'no',d>=h?'○':'✕'))].join('');
+    return `<div class="dia" ${alvo&&alvo.d===d?'id="hojeBloco"':''}><div class="dh"><b>${NF[wd(d)]}, ${fmt(d).slice(0,5)}${tag?' · '+tag:''}</b><small>${d>h?'agendada':feitas.length+'/'+total}</small></div>${rows}</div>`;
   }).join('');
-  return `<h2>Diário</h2><p class="sub">Dia a dia, em ordem cronológica.</p>
-  <div class="seg"><button class="pre ${ordem==='desc'?'on':''}" data-a="ord" data-o="desc">Mais recentes</button><button class="pre ${ordem==='asc'?'on':''}" data-a="ord" data-o="asc">Mais antigas</button></div>
-  ${html||'<div class="empty">Nada registrado ainda.</div>'}
-  ${mais?'<button class="btn ghost" data-a="mais">Mostrar mais 30 dias</button>':''}`;
+  return `<h2>Diário</h2><p class="sub">Tudo em ordem cronológica, organizado automaticamente por data.</p>
+  ${start>inicio?'<button class="btn ghost" data-a="mais" style="margin-bottom:16px">Ver dias anteriores</button>':''}
+  ${html||'<div class="empty">Nada registrado ainda.</div>'}`;
 }
 function vPerfil(){
   const criada=user.metadata.creationTime?iso(new Date(user.metadata.creationTime)):hoje();
@@ -423,7 +434,6 @@ $('view').addEventListener('click',async e=>{
     else if(a==='del'&&t){if(confirm('Excluir esta tarefa e sua sequência?'))await habits().doc(t.id).delete()}
     else if(a==='add')await criar();
     else if(a==='dia'||a==='preset')pick(b);
-    else if(a==='ord'){ordem=b.dataset.o;render()}
     else if(a==='mais'){janela+=30;render()}
     else if(a==='edit'&&t)abrirEdit(t);
     else if(a==='nome'){const v=$('pn').value.trim();if(v){await user.updateProfile({displayName:v});await db.collection('users').doc(user.uid).set({nome:v},{merge:true});$('avt').textContent=v[0].toUpperCase();render()}}
@@ -435,10 +445,10 @@ $('view').addEventListener('click',async e=>{
 $('view').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nome')criar()});
 async function criar(){
   const nome=$('nome').value.trim();if(!nome){$('nome').focus();return}
-  if(!S.novo.unico&&!S.novo.sem.length)return alert('Escolha pelo menos um dia da semana.');
+  if(!S.novo.data&&!S.novo.sem.length)return alert('Escolha pelo menos um dia da semana.');
   const hora=$('hora').value||'20:00';$('nome').value='';
-  await habits().add({nome,hora,dias:[],criada:hoje(),ts:Date.now(),sem:S.novo.sem,data:S.novo.unico?hoje():null});
-  S.novo={sem:[...TODOS],unico:false};pintar('novo');
+  await habits().add({nome,hora,dias:[],criada:hoje(),ts:Date.now(),sem:S.novo.sem,data:S.novo.data||null});
+  S.novo={sem:[...TODOS],data:null};pintar('novo');
   if('Notification' in window&&Notification.permission==='default')Notification.requestPermission().then(()=>{if(aba==='hoje')renderNotif()});
 }
 function exportar(){
