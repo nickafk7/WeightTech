@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -114,13 +115,14 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
   <main id="view"></main>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-setTimeout(function(){if(!window.__ok){var e=document.getElementById('aE');if(e)e.textContent='Não foi possível carregar o Firebase. Abra pelo seu domínio (https://), não pelo arquivo no computador nem pela prévia.'}},4000);
-</script>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+if(typeof firebase==='undefined'){
+  document.getElementById('aE').textContent='Não foi possível carregar o Firebase. Verifique sua conexão e recarregue a página.';
+  throw new Error('firebase não carregou');
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyBdWdVaqrocHaZEq2bxghzFtLhRE4aGFD4",
@@ -131,10 +133,10 @@ const firebaseConfig = {
   appId: "1:81841243626:web:5e8aff73a25f5770885e93",
   measurementId: "G-QD5RH2733X"
 };
-window.__ok=true;
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const FV = firebase.firestore.FieldValue;
 
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,'0');
@@ -146,7 +148,7 @@ const fmt=s=>{const [y,m,d]=s.split('-');return `${d}/${m}/${y}`};
 
 let user=null, tarefas=[], unsub=null, modo='login', aba='hoje';
 const avisos=new Map();
-const habits=()=>collection(db,'users',user.uid,'habits');
+const habits=()=>db.collection('users').doc(user.uid).collection('habits');
 const nomeUser=()=>user.displayName||user.email.split('@')[0];
 
 /* ---------- auth ---------- */
@@ -175,11 +177,11 @@ async function enviar(){
   $('aB').disabled=true;
   try{
     if(modo==='reg'){
-      const c=await createUserWithEmailAndPassword(auth,email,pw);
-      await updateProfile(c.user,{displayName:nome});
-      await setDoc(doc(db,'users',c.user.uid),{nome,email,criada:hoje()},{merge:true});
+      const c=await auth.createUserWithEmailAndPassword(email,pw);
+      await c.user.updateProfile({displayName:nome});
+      await db.collection('users').doc(c.user.uid).set({nome,email,criada:hoje()},{merge:true});
       user=auth.currentUser;start();
-    }else await signInWithEmailAndPassword(auth,email,pw);
+    }else await auth.signInWithEmailAndPassword(email,pw);
   }catch(e){erro(e)}
   $('aB').disabled=false;
 }
@@ -188,10 +190,10 @@ $('aB').onclick=enviar;
 $('aR').onclick=async()=>{
   const email=$('em').value.trim();
   if(!/^\S+@\S+\.\S+$/.test(email))return $('aE').textContent='Digite seu e-mail acima para receber o link.';
-  try{await sendPasswordResetEmail(auth,email);$('aE').textContent='Enviamos um link para redefinir a senha.'}catch(e){erro(e)}
+  try{await auth.sendPasswordResetEmail(email);$('aE').textContent='Enviamos um link para redefinir a senha.'}catch(e){erro(e)}
 };
 
-onAuthStateChanged(auth,u=>{
+auth.onAuthStateChanged(u=>{
   if(unsub){unsub();unsub=null}
   user=u;
   if(!u){tarefas=[];$('app').classList.add('hide');$('auth').classList.remove('hide');setModo('login');return}
@@ -203,7 +205,7 @@ function start(){
   $('pw').value='';$('aE').textContent='';
   aba='hoje';render();
   if(unsub)unsub();
-  unsub=onSnapshot(habits(),snap=>{
+  unsub=habits().onSnapshot(snap=>{
     tarefas=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ts||0)-(b.ts||0));
     render();checar();
   },e=>console.error('Firestore:',e));
@@ -279,11 +281,11 @@ $('view').addEventListener('click',async e=>{
   const b=e.target.closest('button[data-a]');if(!b)return;
   const a=b.dataset.a,t=tarefas.find(x=>x.id===b.dataset.id);
   try{
-    if(a==='tog'&&t){const h=hoje();await updateDoc(doc(db,'users',user.uid,'habits',t.id),{dias:t.dias.includes(h)?arrayRemove(h):arrayUnion(h)})}
-    else if(a==='del'&&t){if(confirm('Excluir esta tarefa e sua sequência?'))await deleteDoc(doc(db,'users',user.uid,'habits',t.id))}
+    if(a==='tog'&&t){const h=hoje();await habits().doc(t.id).update({dias:t.dias.includes(h)?FV.arrayRemove(h):FV.arrayUnion(h)})}
+    else if(a==='del'&&t){if(confirm('Excluir esta tarefa e sua sequência?'))await habits().doc(t.id).delete()}
     else if(a==='add')await criar();
-    else if(a==='nome'){const v=$('pn').value.trim();if(v){await updateProfile(user,{displayName:v});await setDoc(doc(db,'users',user.uid),{nome:v},{merge:true});$('avt').textContent=v[0].toUpperCase();render()}}
-    else if(a==='sair')await signOut(auth);
+    else if(a==='nome'){const v=$('pn').value.trim();if(v){await user.updateProfile({displayName:v});await db.collection('users').doc(user.uid).set({nome:v},{merge:true});$('avt').textContent=v[0].toUpperCase();render()}}
+    else if(a==='sair')await auth.signOut();
     else if(a==='exp')exportar();
     else if(a==='apagar')await apagar();
   }catch(err){console.error(err);alert('Não foi possível concluir. Tente novamente.')}
@@ -292,7 +294,7 @@ $('view').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nome
 async function criar(){
   const nome=$('nome').value.trim();if(!nome){$('nome').focus();return}
   const hora=$('hora').value||'20:00';$('nome').value='';
-  await addDoc(habits(),{nome,hora,dias:[],criada:hoje(),ts:Date.now()});
+  await habits().add({nome,hora,dias:[],criada:hoje(),ts:Date.now()});
   if('Notification' in window&&Notification.permission==='default')Notification.requestPermission().then(()=>{if(aba==='hoje')renderNotif()});
 }
 function exportar(){
@@ -302,9 +304,9 @@ function exportar(){
 async function apagar(){
   if(Date.now()-Date.parse(user.metadata.lastSignInTime)>5*60000)return alert('Por segurança, saia e entre de novo antes de excluir a conta.');
   if(!confirm('Excluir sua conta e todos os dados? Isso não pode ser desfeito.'))return;
-  const snap=await getDocs(habits());const batch=writeBatch(db);
-  snap.forEach(d=>batch.delete(d.ref));batch.delete(doc(db,'users',user.uid));
-  await batch.commit();await deleteUser(auth.currentUser);
+  const snap=await habits().get();const batch=db.batch();
+  snap.forEach(d=>batch.delete(d.ref));batch.delete(db.collection('users').doc(user.uid));
+  await batch.commit();await auth.currentUser.delete();
 }
 
 /* ---------- notificações ---------- */
@@ -312,4 +314,20 @@ function renderNotif(){
   const el=$('notif');if(!el)return;
   if(!('Notification' in window)){el.innerHTML='<span>Este navegador não suporta notificações.</span>';return}
   const p=Notification.permission;
-  el.innerHTML=p==='granted'?'<span>Lembretes ativos. Mantenha esta aba aberta.</span>':p==='denied'?'<span>Notificações bloqueadas. Libere nas configuraç
+  el.innerHTML=p==='granted'?'<span>Lembretes ativos. Mantenha esta aba aberta.</span>':p==='denied'?'<span>Notificações bloqueadas. Libere nas configurações do site.</span>':'<span>Ative os lembretes para não esquecer.</span><button id="perm">Ativar</button>';
+  const b=$('perm');if(b)b.onclick=()=>Notification.requestPermission().then(renderNotif);
+}
+function checar(){
+  if(!user)return;
+  const now=new Date(),h=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  tarefas.forEach(t=>{
+    if(t.dias.includes(hoje())||h<t.hora)return;
+    if(avisos.has(t.id)&&Date.now()-avisos.get(t.id)<30*60000)return;
+    avisos.set(t.id,Date.now());
+    try{if('Notification' in window&&Notification.permission==='granted')new Notification('Disciplina',{body:`Você ainda não fez "${t.nome}". Sua sequência de ${streak(t)} dias está em risco.`})}catch(e){}
+  });
+}
+setInterval(checar,30000);
+</script>
+</body>
+</html>
