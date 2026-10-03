@@ -33,14 +33,8 @@ input:focus{outline:none;border-color:var(--l3)}
 .sep:before,.sep:after{content:"";flex:1;height:1px;background:var(--line)}
 .alt{text-align:center;color:var(--mut);font-size:14px;margin-top:18px}
 .alt button{color:var(--tx);font-weight:600;text-decoration:underline}
-header{position:sticky;top:0;z-index:5;background:rgba(10,10,10,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.bar{max-width:760px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px}
 .logo{font-size:22px;filter:grayscale(1)}
-nav{display:flex;gap:4px;flex:1}
-nav button{padding:8px 11px;border-radius:9px;color:var(--mut);font-weight:500}
-nav button.on{background:var(--s2);color:var(--tx)}
 .av{width:34px;height:34px;border-radius:50%;background:var(--l2);display:grid;place-items:center;font-weight:700;font-size:14px;flex:none}
-main{max-width:760px;margin:0 auto;padding:22px 16px 70px}
 h2{font-size:24px;font-weight:800;margin-bottom:4px}
 .sub{color:var(--mut);margin:0 0 20px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
@@ -114,6 +108,70 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
 .dia{scroll-margin-top:70px}
 .presets .dt{width:auto;padding:6px 12px;border-radius:999px;font-size:13px;color-scheme:dark;color:var(--mut)}
 .presets .dt.on{border-color:var(--ac);color:var(--tx)}
+
+html{-webkit-text-size-adjust:100%}
+button{touch-action:manipulation}
+#auth{min-height:100vh;min-height:100dvh;padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom))}
+
+/* ---- base: celular ---- */
+#side{display:contents}
+header{position:sticky;top:0;z-index:5;background:rgba(10,10,10,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.bar{max-width:880px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;gap:2px;background:rgba(10,10,10,.97);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:6px max(6px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;border-radius:10px;color:var(--mut);font-size:11.5px;font-weight:500}
+nav button svg{width:22px;height:22px}
+nav button.on{color:var(--tx);background:var(--s2)}
+main{max-width:880px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right)) 110px max(16px,env(safe-area-inset-left))}
+#view[data-aba="tempo"],#view[data-aba="perfil"]{max-width:720px}
+.tgrid{display:grid;gap:10px}
+.tgrid .task{margin-bottom:0}
+.tgrid .empty{grid-column:1/-1}
+@media (max-width:480px){
+  .add{flex-wrap:wrap}
+  .add #nome{flex:1 1 100%}
+  .add input[type=time]{flex:1;width:auto}
+  .add .btn{flex:1}
+  .chip{padding:10px 0}
+}
+@media (max-width:380px){
+  .st{padding:11px}.st b{font-size:22px}.st span{font-size:11.5px}
+  .flame{width:42px;height:42px;font-size:24px}
+  .top{gap:9px}.done{padding:9px 11px}
+}
+@media (max-width:639px){
+  #modal{place-items:end center;padding:0}
+  .mbox{max-width:none;border-radius:18px 18px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+}
+
+/* ---- tablet ---- */
+@media (min-width:640px){
+  nav{position:static;max-width:880px;margin:0 auto;background:none;backdrop-filter:none;border:0;padding:10px 16px 0;gap:6px}
+  nav button{flex:0 0 auto;flex-direction:row;gap:8px;padding:9px 14px;font-size:14px}
+  nav button svg{width:18px;height:18px}
+  main{padding:22px 24px 60px}
+  .tgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+  .heat{grid-template-rows:repeat(7,20px)}
+  .c{width:20px;height:20px}
+  .card{padding:20px}
+  h2{font-size:28px}
+}
+
+/* ---- desktop ---- */
+@media (min-width:1024px){
+  #app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+  #side{display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--line);background:var(--s1)}
+  header{position:static;background:none;backdrop-filter:none;border:0}
+  .bar{padding:22px 20px 14px}
+  nav{flex-direction:column;max-width:none;margin:0;width:100%;padding:8px 12px;gap:4px}
+  nav button{width:100%;padding:11px 14px;text-align:left}
+  main{max-width:1040px;width:100%;padding:36px 40px 60px}
+  #view[data-aba="tempo"],#view[data-aba="perfil"]{max-width:720px}
+  .stats{gap:14px}.st{padding:18px}.st b{font-size:32px}
+}
+@media (min-width:1500px){
+  .tgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  main{max-width:1280px}
+}
 </style>
 </head>
 <body>
@@ -134,16 +192,15 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
 </section>
 
 <div id="app" class="hide">
-  <header><div class="bar">
-    <span class="logo">🔥</span>
+  <aside id="side">
+    <header><div class="bar"><span class="logo">🔥</span><div class="av" id="avt"></div></div></header>
     <nav id="nav">
-      <button data-v="hoje" class="on">Hoje</button>
-      <button data-v="hist">Histórico</button>
-      <button data-v="tempo">Diário</button>
-      <button data-v="perfil">Perfil</button>
+      <button data-v="hoje" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg><span>Hoje</span></button>
+      <button data-v="hist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg><span>Histórico</span></button>
+      <button data-v="tempo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>Diário</span></button>
+      <button data-v="perfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 14.5-4 16 0"/></svg><span>Perfil</span></button>
     </nav>
-    <div class="av" id="avt"></div>
-  </div></header>
+  </aside>
   <main id="view"></main>
 </div>
 
@@ -339,6 +396,7 @@ function render(){
   if(!user)return;
   [...$('nav').children].forEach(b=>b.classList.toggle('on',b.dataset.v===aba));
   const en=$('nome'),eh=$('hora'),vn=en?en.value:'',vh=eh?eh.value:'',foco=!!en&&document.activeElement===en;
+  $('view').dataset.aba=aba;
   $('view').innerHTML=aba==='hoje'?vHoje():aba==='hist'?vHist():aba==='tempo'?vTempo():vPerfil();
   if(aba==='hoje'){renderNotif();if(vn)$('nome').value=vn;if(vh)$('hora').value=vh;if(foco)$('nome').focus()}
 }
@@ -355,13 +413,13 @@ function vHoje(){
       <div class="info"><div class="name">${esc(t.nome)}</div><div class="meta"><b>${s} ${s===1?'dia':'dias'}</b> seguidos · recorde ${recorde(t)}</div><div class="meta">${esc(rotulo(t))} · ${esc(t.hora)}</div></div>
       ${btn}</div>
       <div class="week">${dias}</div>
-      <div class="row2"><span>${t.dias.length} dias no total</span><span class="a2"><button data-a="edit" data-id="${t.id}">Editar</button><button data-a="del" data-id="${t.id}">Excluir</button></span></div></div>`;
+      <div class="row2"><span>${t.dias.length} ${t.dias.length===1?'dia':'dias'} no total</span><span class="a2"><button data-a="edit" data-id="${t.id}">Editar</button><button data-a="del" data-id="${t.id}">Excluir</button></span></div></div>`;
   }).join(''):'<div class="empty">Nenhuma tarefa ainda. Crie a primeira acima.</div>';
   return `<h2>${sd}, ${esc(nomeUser().split(' ')[0])}</h2><p class="sub">${ag.length?(feitas===ag.length?'Tudo feito por hoje.':`Faltam ${ag.length-feitas} para hoje.`):(tarefas.length?'Nenhuma tarefa para hoje.':'Comece criando uma tarefa.')}</p>
   <div class="stats"><div class="st"><b>${feitas}/${ag.length}</b><span>Feitas hoje</span></div><div class="st"><b>${melhor}</b><span>Maior sequência atual</span></div><div class="st"><b>${tarefas.reduce((a,t)=>a+t.dias.length,0)}</b><span>Dias concluídos</span></div></div>
   <div class="add"><input id="nome" placeholder="Nova tarefa" maxlength="60" aria-label="Nome da tarefa"><input id="hora" type="time" value="20:00" aria-label="Horário do lembrete"><button class="btn" data-a="add">Criar</button></div>
   <div id="chipsNovo">${seletor(S.novo)}</div>
-  <div class="notif" id="notif"></div>${lista}`;
+  <div class="notif" id="notif"></div><div class="tgrid">${lista}</div>`;
 }
 function vHist(){
   const h=hoje(),n=Math.max(tarefas.length,1),total=105;
