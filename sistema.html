@@ -7,12 +7,12 @@
 <title>Disciplina</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0a0a0a;--s1:#121212;--s2:#181818;--line:#272727;--tx:#ededed;--mut:#8a8a8a;--ac:#e4e4e4;--l1:#2a2a2a;--l2:#4a4a4a;--l3:#8a8a8a;--l4:#e4e4e4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
+:root{--bg:#0a0a0a;--s1:#121212;--s2:#181818;--line:#272727;--tx:#ededed;--mut:#8a8a8a;--ac:#e4e4e4;--l1:#2a2a2a;--l2:#4a4a4a;--l3:#8a8a8a;--l4:#e4e4e4}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:'Instrument Sans',system-ui,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
 h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif;margin:0}
 button{font:inherit;cursor:pointer;border:0;color:inherit;background:none}
+button:disabled{opacity:.5;cursor:wait}
 input{font:inherit;color:var(--tx);background:var(--s2);border:1px solid var(--line);border-radius:10px;padding:12px 13px;width:100%;min-width:0}
 input:focus{outline:none;border-color:var(--l3)}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
@@ -28,9 +28,12 @@ input:focus{outline:none;border-color:var(--l3)}
 .f{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .f label{font-size:13px;color:var(--mut)}
 .err{color:#d0d0d0;font-size:13px;min-height:18px;margin:-4px 0 10px}
+.lnk{color:var(--mut);font-size:13px;text-decoration:underline;margin:-6px 0 14px;display:inline-block}
+.sep{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:12px;margin:14px 0}
+.sep:before,.sep:after{content:"";flex:1;height:1px;background:var(--line)}
 .alt{text-align:center;color:var(--mut);font-size:14px;margin-top:18px}
 .alt button{color:var(--tx);font-weight:600;text-decoration:underline}
-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(10,10,10,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:5;background:rgba(10,10,10,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .bar{max-width:760px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px}
 .logo{font-size:22px;filter:grayscale(1)}
 nav{display:flex;gap:4px;flex:1}
@@ -91,9 +94,11 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
     <div class="f hide" id="gN"><label for="nm">Nome</label><input id="nm" autocomplete="name"></div>
     <div class="f"><label for="em">E-mail</label><input id="em" type="email" autocomplete="email"></div>
     <div class="f"><label for="pw">Senha</label><input id="pw" type="password" autocomplete="current-password"></div>
+    <button class="lnk" id="aR">Esqueci a senha</button>
     <div class="err" id="aE"></div>
     <button class="btn" id="aB">Entrar</button>
-    <button class="btn ghost" id="aD" style="margin-top:10px">Entrar sem conta (modo dev)</button>
+    <div class="sep">ou</div>
+    <button class="btn ghost" id="aG">Continuar com Google</button>
     <div class="alt"><span id="aA">Ainda não tem conta?</span> <button id="aX">Criar conta</button></div>
   </div>
 </section>
@@ -112,9 +117,28 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
 </div>
 
 <script>
+setTimeout(function(){if(!window.__ok){var e=document.getElementById('aE');if(e)e.textContent='Não foi possível carregar o Firebase. Abra pelo seu domínio (https://), não pelo arquivo no computador nem pela prévia.'}},4000);
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail, updateProfile, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBdWdVaqrocHaZEq2bxghzFtLhRE4aGFD4",
+  authDomain: "sistema-pesagem-64115.firebaseapp.com",
+  projectId: "sistema-pesagem-64115",
+  storageBucket: "sistema-pesagem-64115.firebasestorage.app",
+  messagingSenderId: "81841243626",
+  appId: "1:81841243626:web:5e8aff73a25f5770885e93",
+  measurementId: "G-QD5RH2733X"
+};
+window.__ok=true;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
 const $=id=>document.getElementById(id);
-const ld=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v===null||v===undefined?d:v}catch(e){return d}};
-const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const pad=n=>String(n).padStart(2,'0');
 const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const hoje=()=>iso(new Date());
@@ -122,16 +146,21 @@ const addD=(s,n)=>{const [y,m,d]=s.split('-').map(Number);return iso(new Date(y,
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=s=>{const [y,m,d]=s.split('-');return `${d}/${m}/${y}`};
 
-let users=ld('disc_users',[]), me=null, tarefas=[], modo='login', aba='hoje';
+let user=null, tarefas=[], unsub=null, modo='login', aba='hoje';
+const avisos=new Map();
+const habits=()=>collection(db,'users',user.uid,'habits');
+const nomeUser=()=>user.displayName||user.email.split('@')[0];
 
-async function hash(pw,salt){const b=new TextEncoder().encode(salt+pw);const h=await crypto.subtle.digest('SHA-256',b);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('')}
-const salvar=()=>sv('disc_data_'+me.id,tarefas);
+/* ---------- auth ---------- */
+const MSG={'auth/invalid-credential':'E-mail ou senha incorretos.','auth/wrong-password':'E-mail ou senha incorretos.','auth/user-not-found':'E-mail ou senha incorretos.','auth/email-already-in-use':'Este e-mail já tem conta. Entre com ele.','auth/weak-password':'A senha precisa ter pelo menos 6 caracteres.','auth/invalid-email':'Digite um e-mail válido.','auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente de novo.','auth/network-request-failed':'Sem conexão. Verifique sua internet.','auth/unauthorized-domain':'Este domínio não está autorizado no Firebase (Authentication → Settings → Authorized domains).','auth/operation-not-allowed':'Este método de login não está ativado no Firebase.'};
+const erro=e=>{if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request')return;$('aE').textContent=MSG[e.code]||('Algo deu errado ('+(e.code||e.message)+').')};
 
 function setModo(m){
   modo=m;const r=m==='reg';
   $('aT').textContent=r?'Criar conta':'Entrar';
   $('aS').textContent=r?'Leva menos de um minuto.':'Acesse sua conta para continuar sua sequência.';
   $('gN').classList.toggle('hide',!r);
+  $('aR').classList.toggle('hide',r);
   $('aB').textContent=r?'Criar conta':'Entrar';
   $('aA').textContent=r?'Já tem conta?':'Ainda não tem conta?';
   $('aX').textContent=r?'Entrar':'Criar conta';
@@ -140,76 +169,85 @@ function setModo(m){
 }
 $('aX').onclick=()=>setModo(modo==='reg'?'login':'reg');
 async function enviar(){
-  const email=$('em').value.trim().toLowerCase(), pw=$('pw').value, nome=$('nm').value.trim();
-  const err=t=>{$('aE').textContent=t};
-  if(!/^\S+@\S+\.\S+$/.test(email))return err('Digite um e-mail válido.');
-  if(modo==='reg'){
-    if(!nome)return err('Digite seu nome.');
-    if(pw.length<6)return err('A senha precisa ter pelo menos 6 caracteres.');
-    if(users.some(u=>u.email===email))return err('Este e-mail já tem conta. Entre com ele.');
-    const salt=crypto.randomUUID();
-    const u={id:crypto.randomUUID(),nome,email,salt,hash:await hash(pw,salt),criada:hoje()};
-    const primeira=users.length===0;
-    users.push(u);sv('disc_users',users);
-    if(primeira){const old=ld('chama_v1',null);if(Array.isArray(old))sv('disc_data_'+u.id,old)}
-    entrar(u);
-  }else{
-    const u=users.find(x=>x.email===email);
-    if(!u||u.hash!==await hash(pw,u.salt))return err('E-mail ou senha incorretos.');
-    entrar(u);
-  }
+  const email=$('em').value.trim(), pw=$('pw').value, nome=$('nm').value.trim();
+  $('aE').textContent='';
+  if(!/^\S+@\S+\.\S+$/.test(email))return $('aE').textContent='Digite um e-mail válido.';
+  if(modo==='reg'&&!nome)return $('aE').textContent='Digite seu nome.';
+  if(!pw)return $('aE').textContent='Digite sua senha.';
+  $('aB').disabled=true;
+  try{
+    if(modo==='reg'){
+      const c=await createUserWithEmailAndPassword(auth,email,pw);
+      await updateProfile(c.user,{displayName:nome});
+      await setDoc(doc(db,'users',c.user.uid),{nome,email,criada:hoje()},{merge:true});
+      user=auth.currentUser;start();
+    }else await signInWithEmailAndPassword(auth,email,pw);
+  }catch(e){erro(e)}
+  $('aB').disabled=false;
 }
 $('aB').onclick=enviar;
 ['em','pw','nm'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter')enviar()}));
+$('aG').onclick=async()=>{$('aE').textContent='';try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(e){erro(e)}};
+$('aR').onclick=async()=>{
+  const email=$('em').value.trim();
+  if(!/^\S+@\S+\.\S+$/.test(email))return $('aE').textContent='Digite seu e-mail acima para receber o link.';
+  try{await sendPasswordResetEmail(auth,email);$('aE').textContent='Enviamos um link para redefinir a senha.'}catch(e){erro(e)}
+};
 
-const DEV={id:'dev',nome:'Dev',email:'dev@local',criada:hoje()};
-$('aD').onclick=()=>entrar(DEV);
-function entrar(u){
-  me=u;sv('disc_session',u.id);
-  tarefas=ld('disc_data_'+u.id,[]);
-  $('pw').value='';$('aE').textContent='';
+onAuthStateChanged(auth,u=>{
+  if(unsub){unsub();unsub=null}
+  user=u;
+  if(!u){tarefas=[];$('app').classList.add('hide');$('auth').classList.remove('hide');setModo('login');return}
+  start();
+});
+function start(){
   $('auth').classList.add('hide');$('app').classList.remove('hide');
-  $('avt').textContent=u.nome[0].toUpperCase();
-  aba='hoje';render();checar();
-}
-function sair(){
-  me=null;sv('disc_session',null);tarefas=[];
-  $('app').classList.add('hide');$('auth').classList.remove('hide');setModo('login');
+  $('avt').textContent=nomeUser()[0].toUpperCase();
+  $('pw').value='';$('aE').textContent='';
+  aba='hoje';render();
+  if(unsub)unsub();
+  unsub=onSnapshot(habits(),snap=>{
+    tarefas=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    render();checar();
+  },e=>console.error('Firestore:',e));
 }
 
+/* ---------- lógica ---------- */
 function streak(t){let d=hoje(),n=0;if(!t.dias.includes(d))d=addD(d,-1);while(t.dias.includes(d)){n++;d=addD(d,-1)}return n}
 function recorde(t){const s=[...t.dias].sort();let b=0,c=0,p=null;for(const d of s){c=(p&&addD(p,1)===d)?c+1:1;b=Math.max(b,c);p=d}return b}
 
+/* ---------- views ---------- */
 $('nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;aba=b.dataset.v;render()};
 function render(){
+  if(!user)return;
   [...$('nav').children].forEach(b=>b.classList.toggle('on',b.dataset.v===aba));
+  const foco=document.activeElement&&document.activeElement.id==='nome'?$('nome').value:null;
   $('view').innerHTML=aba==='hoje'?vHoje():aba==='hist'?vHist():vPerfil();
-  if(aba==='hoje')renderNotif();
+  if(aba==='hoje'){renderNotif();if(foco!==null){$('nome').value=foco;$('nome').focus()}}
 }
 function vHoje(){
   const h=hoje(), feitas=tarefas.filter(t=>t.dias.includes(h)).length;
   const melhor=Math.max(0,...tarefas.map(streak));
   const hr=new Date().getHours(), sd=hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite';
-  const lista=tarefas.length?tarefas.map((t,i)=>{
+  const lista=tarefas.length?tarefas.map(t=>{
     const s=streak(t),f=t.dias.includes(h);
     const dias=[...Array(7)].map((_,k)=>{const d=addD(h,k-6);return `<div class="d ${t.dias.includes(d)?'h':''}"><i></i>${'DSTQQSS'[new Date(d+'T12:00:00').getDay()]}</div>`}).join('');
     return `<div class="task"><div class="top">
       <div class="flame ${s>0&&f?'on':''}">🔥</div>
-      <div class="info"><div class="name">${esc(t.nome)}</div><div class="meta"><b>${s} ${s===1?'dia':'dias'}</b> seguidos · recorde ${recorde(t)} · ${t.hora}</div></div>
-      <button class="done ${f?'ok':''}" data-a="tog" data-i="${i}">${f?'Feito ✓':'Fiz hoje'}</button></div>
+      <div class="info"><div class="name">${esc(t.nome)}</div><div class="meta"><b>${s} ${s===1?'dia':'dias'}</b> seguidos · recorde ${recorde(t)} · ${esc(t.hora)}</div></div>
+      <button class="done ${f?'ok':''}" data-a="tog" data-id="${t.id}">${f?'Feito ✓':'Fiz hoje'}</button></div>
       <div class="week">${dias}</div>
-      <div class="row2"><span>${t.dias.length} dias no total</span><button data-a="del" data-i="${i}">Excluir</button></div></div>`;
+      <div class="row2"><span>${t.dias.length} dias no total</span><button data-a="del" data-id="${t.id}">Excluir</button></div></div>`;
   }).join(''):'<div class="empty">Nenhuma tarefa ainda. Crie a primeira acima.</div>';
-  return `<h2>${sd}, ${esc(me.nome.split(' ')[0])}</h2><p class="sub">${tarefas.length?(feitas===tarefas.length?'Tudo feito por hoje.':`Faltam ${tarefas.length-feitas} para hoje.`):'Comece criando uma tarefa diária.'}</p>
+  return `<h2>${sd}, ${esc(nomeUser().split(' ')[0])}</h2><p class="sub">${tarefas.length?(feitas===tarefas.length?'Tudo feito por hoje.':`Faltam ${tarefas.length-feitas} para hoje.`):'Comece criando uma tarefa diária.'}</p>
   <div class="stats"><div class="st"><b>${feitas}/${tarefas.length}</b><span>Feitas hoje</span></div><div class="st"><b>${melhor}</b><span>Maior sequência atual</span></div><div class="st"><b>${tarefas.reduce((a,t)=>a+t.dias.length,0)}</b><span>Dias concluídos</span></div></div>
   <div class="add"><input id="nome" placeholder="Nova tarefa diária" maxlength="60" aria-label="Nome da tarefa"><input id="hora" type="time" value="20:00" aria-label="Horário do lembrete"><button class="btn" data-a="add">Criar</button></div>
   <div class="notif" id="notif"></div>${lista}`;
 }
 function vHist(){
   const h=hoje(),n=Math.max(tarefas.length,1),total=105;
-  let cells='';
   const first=new Date(addD(h,-(total-1))+'T12:00:00').getDay();
-  cells+='<div></div>'.repeat(first);
+  let cells='<div></div>'.repeat(first);
   for(let k=total-1;k>=0;k--){
     const d=addD(h,-k),q=tarefas.filter(t=>t.dias.includes(d)).length,r=q/n;
     const l=q===0?0:r<.34?1:r<.67?2:r<1?3:4;
@@ -226,40 +264,53 @@ function vHist(){
   <div class="card"><h3>Últimos 60 dias</h3>${log||'<div class="empty" style="border:0">Nada concluído ainda.</div>'}</div>`;
 }
 function vPerfil(){
+  const criada=user.metadata.creationTime?iso(new Date(user.metadata.creationTime)):hoje();
   return `<h2>Perfil</h2><p class="sub">Dados da sua conta.</p>
-  <div class="prof"><div class="av">${esc(me.nome[0].toUpperCase())}</div><div><h3>${esc(me.nome)}</h3><div class="meta">${esc(me.email)}</div></div></div>
+  <div class="prof"><div class="av">${esc(nomeUser()[0].toUpperCase())}</div><div><h3>${esc(nomeUser())}</h3><div class="meta">${esc(user.email||'')}</div></div></div>
   <div class="card"><h3>Conta</h3>
-    <div class="f"><label for="pn">Nome</label><input id="pn" value="${esc(me.nome)}" maxlength="40"></div>
+    <div class="f"><label for="pn">Nome</label><input id="pn" value="${esc(nomeUser())}" maxlength="40"></div>
     <button class="btn sm" data-a="nome">Salvar nome</button>
-    <p class="meta" style="margin:14px 0 0">Conta criada em ${fmt(me.criada)}</p></div>
+    <p class="meta" style="margin:14px 0 0">Conta criada em ${fmt(criada)}</p></div>
   <div class="acts">
     <button class="btn ghost" data-a="exp">Exportar meus dados</button>
     <button class="btn ghost" data-a="sair">Sair</button>
     <button class="btn ghost" data-a="apagar">Excluir conta</button></div>`;
 }
 
-$('view').addEventListener('click',e=>{
+/* ---------- ações ---------- */
+$('view').addEventListener('click',async e=>{
   const b=e.target.closest('button[data-a]');if(!b)return;
-  const a=b.dataset.a,i=+b.dataset.i;
-  if(a==='tog'){const t=tarefas[i],h=hoje();t.dias=t.dias.includes(h)?t.dias.filter(x=>x!==h):[...t.dias,h];salvar();render()}
-  else if(a==='del'){if(confirm('Excluir esta tarefa e sua sequência?')){tarefas.splice(i,1);salvar();render()}}
-  else if(a==='add')criar();
-  else if(a==='nome'){const v=$('pn').value.trim();if(v){me.nome=v;users=users.map(u=>u.id===me.id?me:u);sv('disc_users',users);$('avt').textContent=v[0].toUpperCase();render()}}
-  else if(a==='sair')sair();
-  else if(a==='exp')exportar();
-  else if(a==='apagar'){if(confirm('Excluir sua conta e todos os dados? Isso não pode ser desfeito.')){users=users.filter(u=>u.id!==me.id);sv('disc_users',users);try{localStorage.removeItem('disc_data_'+me.id)}catch(e){}sair()}}
+  const a=b.dataset.a,t=tarefas.find(x=>x.id===b.dataset.id);
+  try{
+    if(a==='tog'&&t){const h=hoje();await updateDoc(doc(db,'users',user.uid,'habits',t.id),{dias:t.dias.includes(h)?arrayRemove(h):arrayUnion(h)})}
+    else if(a==='del'&&t){if(confirm('Excluir esta tarefa e sua sequência?'))await deleteDoc(doc(db,'users',user.uid,'habits',t.id))}
+    else if(a==='add')await criar();
+    else if(a==='nome'){const v=$('pn').value.trim();if(v){await updateProfile(user,{displayName:v});await setDoc(doc(db,'users',user.uid),{nome:v},{merge:true});$('avt').textContent=v[0].toUpperCase();render()}}
+    else if(a==='sair')await signOut(auth);
+    else if(a==='exp')exportar();
+    else if(a==='apagar')await apagar();
+  }catch(err){console.error(err);alert('Não foi possível concluir. Tente novamente.')}
 });
 $('view').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nome')criar()});
-function criar(){
+async function criar(){
   const nome=$('nome').value.trim();if(!nome){$('nome').focus();return}
-  tarefas.push({nome,hora:$('hora').value||'20:00',dias:[],criada:hoje()});salvar();render();
+  const hora=$('hora').value||'20:00';$('nome').value='';
+  await addDoc(habits(),{nome,hora,dias:[],criada:hoje(),ts:Date.now()});
   if('Notification' in window&&Notification.permission==='default')Notification.requestPermission().then(()=>{if(aba==='hoje')renderNotif()});
 }
 function exportar(){
-  const blob=new Blob([JSON.stringify({conta:{nome:me.nome,email:me.email},tarefas},null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({conta:{nome:nomeUser(),email:user.email},tarefas:tarefas.map(({id,...r})=>r)},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='disciplina-dados.json';a.click();
 }
+async function apagar(){
+  if(Date.now()-Date.parse(user.metadata.lastSignInTime)>5*60000)return alert('Por segurança, saia e entre de novo antes de excluir a conta.');
+  if(!confirm('Excluir sua conta e todos os dados? Isso não pode ser desfeito.'))return;
+  const snap=await getDocs(habits());const batch=writeBatch(db);
+  snap.forEach(d=>batch.delete(d.ref));batch.delete(doc(db,'users',user.uid));
+  await batch.commit();await deleteUser(auth.currentUser);
+}
 
+/* ---------- notificações ---------- */
 function renderNotif(){
   const el=$('notif');if(!el)return;
   if(!('Notification' in window)){el.innerHTML='<span>Este navegador não suporta notificações.</span>';return}
@@ -268,18 +319,16 @@ function renderNotif(){
   const b=$('perm');if(b)b.onclick=()=>Notification.requestPermission().then(renderNotif);
 }
 function checar(){
-  if(!me)return;
+  if(!user)return;
   const now=new Date(),h=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
   tarefas.forEach(t=>{
     if(t.dias.includes(hoje())||h<t.hora)return;
-    if(t.ultimoAviso&&Date.now()-t.ultimoAviso<30*60000)return;
-    t.ultimoAviso=Date.now();salvar();
+    if(avisos.has(t.id)&&Date.now()-avisos.get(t.id)<30*60000)return;
+    avisos.set(t.id,Date.now());
     try{if('Notification' in window&&Notification.permission==='granted')new Notification('Disciplina',{body:`Você ainda não fez "${t.nome}". Sua sequência de ${streak(t)} dias está em risco.`})}catch(e){}
   });
 }
 setInterval(checar,30000);
-
-(()=>{const id=ld('disc_session',null),u=id==='dev'?DEV:users.find(x=>x.id===id);if(u||location.hash==='#dev')entrar(u||DEV);else setModo(users.length?'login':'reg')})();
 </script>
 </body>
 </html>
