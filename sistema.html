@@ -37,7 +37,7 @@ header{position:sticky;top:0;z-index:5;background:rgba(10,10,10,.92);backdrop-fi
 .bar{max-width:760px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px}
 .logo{font-size:22px;filter:grayscale(1)}
 nav{display:flex;gap:4px;flex:1}
-nav button{padding:8px 14px;border-radius:9px;color:var(--mut);font-weight:500}
+nav button{padding:8px 11px;border-radius:9px;color:var(--mut);font-weight:500}
 nav button.on{background:var(--s2);color:var(--tx)}
 .av{width:34px;height:34px;border-radius:50%;background:var(--l2);display:grid;place-items:center;font-weight:700;font-size:14px;flex:none}
 main{max-width:760px;margin:0 auto;padding:22px 16px 70px}
@@ -98,6 +98,18 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
 .mbox h3{margin-bottom:14px}
 .mrow{display:flex;gap:8px;margin-top:6px}
 .mrow .btn{flex:1}
+
+.dia{margin-bottom:18px}
+.dh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.dh b{font-family:'Bricolage Grotesque',sans-serif;font-size:16px}
+.dh small{color:var(--mut);font-size:12.5px}
+.it{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--s1);margin-bottom:6px}
+.it .m{width:20px;text-align:center;flex:none}
+.it.ok .m{color:var(--ac);font-weight:700}
+.it.no,.it.pe{color:var(--mut)}
+.it .hr{margin-left:auto;color:var(--mut);font-size:13px;flex:none}
+.it .nm{overflow-wrap:anywhere}
+.seg{display:flex;gap:8px;margin-bottom:16px}
 </style>
 </head>
 <body>
@@ -123,6 +135,7 @@ h2{font-size:24px;font-weight:800;margin-bottom:4px}
     <nav id="nav">
       <button data-v="hoje" class="on">Hoje</button>
       <button data-v="hist">Histórico</button>
+      <button data-v="tempo">Diário</button>
       <button data-v="perfil">Perfil</button>
     </nav>
     <div class="av" id="avt"></div>
@@ -237,6 +250,10 @@ function start(){
 /* ---------- lógica ---------- */
 const TODOS=[0,1,2,3,4,5,6], NOMES=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const S={novo:{sem:[...TODOS],unico:false},edit:null};
+let ordem='desc',janela=30;
+const NF=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const porHora=(a,b)=>(a.hora||'').localeCompare(b.hora||'');
+function ordenadas(){const h=hoje();return [...tarefas].sort((a,b)=>(agendada(b,h)-agendada(a,h))||porHora(a,b))}
 const wd=d=>new Date(d+'T12:00:00').getDay();
 const agendada=(t,d)=>t.data?t.data===d:(t.sem||TODOS).includes(wd(d));
 function rotulo(t){
@@ -315,14 +332,14 @@ function render(){
   if(!user)return;
   [...$('nav').children].forEach(b=>b.classList.toggle('on',b.dataset.v===aba));
   const en=$('nome'),eh=$('hora'),vn=en?en.value:'',vh=eh?eh.value:'',foco=!!en&&document.activeElement===en;
-  $('view').innerHTML=aba==='hoje'?vHoje():aba==='hist'?vHist():vPerfil();
+  $('view').innerHTML=aba==='hoje'?vHoje():aba==='hist'?vHist():aba==='tempo'?vTempo():vPerfil();
   if(aba==='hoje'){renderNotif();if(vn)$('nome').value=vn;if(vh)$('hora').value=vh;if(foco)$('nome').focus()}
 }
 function vHoje(){
   const h=hoje(), ag=tarefas.filter(t=>agendada(t,h)), feitas=ag.filter(t=>t.dias.includes(h)).length;
   const melhor=Math.max(0,...tarefas.map(streak));
   const hr=new Date().getHours(), sd=hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite';
-  const lista=tarefas.length?tarefas.map(t=>{
+  const lista=tarefas.length?ordenadas().map(t=>{
     const s=streak(t),on=agendada(t,h),f=t.dias.includes(h);
     const dias=[...Array(7)].map((_,k)=>{const d=addD(h,k-6);return `<div class="d ${t.dias.includes(d)?'h':''} ${agendada(t,d)?'':'x'}"><i></i>${'DSTQQSS'[wd(d)]}</div>`}).join('');
     const btn=on?`<button class="done ${f?'ok':''}" data-a="tog" data-id="${t.id}">${f?'Feito ✓':'Fiz hoje'}</button>`:`<span class="off">Não é hoje</span>`;
@@ -358,6 +375,31 @@ function vHist(){
   <div class="leg">Menos <span class="c" data-l="0"></span><span class="c" data-l="1"></span><span class="c" data-l="2"></span><span class="c" data-l="3"></span><span class="c" data-l="4"></span> Mais</div></div>
   <div class="card"><h3>Últimos 60 dias</h3>${log||'<div class="empty" style="border:0">Nada concluído ainda.</div>'}</div>`;
 }
+function vTempo(){
+  const h=hoje();
+  const inicio=tarefas.reduce((m,t)=>{const c=t.criada||h;return c<m?c:m},h);
+  let blocos=[];
+  for(let k=0;k<janela;k++){
+    const d=addD(h,-k);
+    if(d<inicio)break;
+    const feitas=tarefas.filter(t=>t.dias.includes(d)).sort(porHora);
+    const falt=tarefas.filter(t=>agendada(t,d)&&d>=(t.criada||d)&&!t.dias.includes(d)).sort(porHora);
+    if(feitas.length||falt.length)blocos.push({d,feitas,falt});
+  }
+  if(ordem==='asc')blocos.reverse();
+  const mais=addD(h,-janela)>=inicio;
+  const html=blocos.map(({d,feitas,falt})=>{
+    const tag=d===h?'Hoje':d===addD(h,-1)?'Ontem':'';
+    const total=feitas.length+falt.length;
+    const it=(t,c,m)=>`<div class="it ${c}"><span class="m">${m}</span><span class="nm">${esc(t.nome)}</span><span class="hr">${esc(t.hora||'')}</span></div>`;
+    const rows=[...feitas.map(t=>it(t,'ok','✓')),...falt.map(t=>it(t,d===h?'pe':'no',d===h?'○':'✕'))].join('');
+    return `<div class="dia"><div class="dh"><b>${NF[wd(d)]}, ${fmt(d).slice(0,5)}${tag?' · '+tag:''}</b><small>${feitas.length}/${total}</small></div>${rows}</div>`;
+  }).join('');
+  return `<h2>Diário</h2><p class="sub">Dia a dia, em ordem cronológica.</p>
+  <div class="seg"><button class="pre ${ordem==='desc'?'on':''}" data-a="ord" data-o="desc">Mais recentes</button><button class="pre ${ordem==='asc'?'on':''}" data-a="ord" data-o="asc">Mais antigas</button></div>
+  ${html||'<div class="empty">Nada registrado ainda.</div>'}
+  ${mais?'<button class="btn ghost" data-a="mais">Mostrar mais 30 dias</button>':''}`;
+}
 function vPerfil(){
   const criada=user.metadata.creationTime?iso(new Date(user.metadata.creationTime)):hoje();
   return `<h2>Perfil</h2><p class="sub">Dados da sua conta.</p>
@@ -381,6 +423,8 @@ $('view').addEventListener('click',async e=>{
     else if(a==='del'&&t){if(confirm('Excluir esta tarefa e sua sequência?'))await habits().doc(t.id).delete()}
     else if(a==='add')await criar();
     else if(a==='dia'||a==='preset')pick(b);
+    else if(a==='ord'){ordem=b.dataset.o;render()}
+    else if(a==='mais'){janela+=30;render()}
     else if(a==='edit'&&t)abrirEdit(t);
     else if(a==='nome'){const v=$('pn').value.trim();if(v){await user.updateProfile({displayName:v});await db.collection('users').doc(user.uid).set({nome:v},{merge:true});$('avt').textContent=v[0].toUpperCase();render()}}
     else if(a==='sair')await auth.signOut();
