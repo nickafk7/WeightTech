@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Aplicativo de disciplina com streaks e tarefas diárias">
+    <meta name="theme-color" content="#FF6B35">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+
+    <title>Chama - Sistema de Disciplina</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0 20px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: url('/icons/icon-192x192.png') center/contain no-repeat;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #FF6B35;
+        }
+
+        .tagline {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 40px;
+        }
+
+        .tasks-section {
+            margin: 40px 0;
+        }
+
+        .task-item {
+            background: #111;
+            border: 1px solid #FF6B35;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .task-item:active {
+            background: #FF6B35;
+            color: #000;
+        }
+
+        .task-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #FF6B35;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .task-checkbox.checked {
+            background: #FF6B35;
+        }
+
+        .task-info h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .task-streak {
+            font-size: 12px;
+            color: #FF6B35;
+        }
+
+        .add-task-btn {
+            width: 100%;
+            padding: 15px;
+            background: #FF6B35;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .add-task-btn:active {
+            opacity: 0.8;
+        }
+
+        .install-prompt {
+            background: #111;
+            border-left: 4px solid #FF6B35;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .install-prompt strong {
+            color: #FF6B35;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo"></div>
+            <h1>Chama</h1>
+            <p class="tagline">Fogo de Sequência. Construa Disciplina.</p>
+        </header>
+
+        <div class="install-prompt" id="installPrompt" style="display: none;">
+            <strong>📱 Adicionar à Tela Inicial</strong><br>
+            Toque o botão de compartilhamento e selecione "Adicionar à tela inicial" para ver o ícone Chama no seu telefone.
+        </div>
+
+        <section class="tasks-section">
+            <h2 style="margin-bottom: 20px; font-size: 18px;">Tarefas de Hoje</h2>
+            <div id="tasksList"></div>
+            <button class="add-task-btn" onclick="addTask()">+ NOVA TAREFA</button>
+        </section>
+    </div>
+
+    <script>
+        // Service Worker Registration (PWA)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => {
+                console.log('SW registration failed:', err);
+            });
+        }
+
+        // Install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPrompt').style.display = 'block';
+        });
+
+        // Load tasks from localStorage
+        function loadTasks() {
+            const tasks = JSON.parse(localStorage.getItem('chamaTasks') || '[]');
+            renderTasks(tasks);
+        }
+
+        function renderTasks(tasks) {
+            const list = document.getElementById('tasksList');
+            list.innerHTML = tasks.map((task, idx) => `
+                <div class="task-item" onclick="toggleTask(${idx})">
+                    <div class="task-checkbox ${task.completed ? 'checked' : ''}">
+                        ${task.completed ? '✓' : ''}
+                    </div>
+                    <div class="task-info">
+                        <h3>${task.name}</h3>
+                        <div class="task-streak">🔥 Sequência: ${task.streak}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleTask(idx) {
+            const tasks = JSON.parse(localStorage.getItem('chamaTasks') || '[]');
+            tasks[idx].completed = !tasks[idx].completed;
+            if (tasks[idx].completed) {
+                tasks[idx].streak++;
+            }
+            localStorage.setItem('chamaTasks', JSON.stringify(tasks));
+            loadTasks();
+        }
+
+        function addTask() {
+            const name = prompt('Nome da tarefa:');
+            if (name) {
+                const tasks = JSON.parse(localStorage.getItem('chamaTasks') || '[]');
+                tasks.push({ name, completed: false, streak: 0 });
+                localStorage.setItem('chamaTasks', JSON.stringify(tasks));
+                loadTasks();
+            }
+        }
+
+        loadTasks();
+    </script>
+</body>
+</html>
